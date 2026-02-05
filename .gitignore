@@ -6,3 +6,6 @@ node_modules
 coverage
 .DS_Store
 .worktrees
+# Ignore compiled test files
+tests/*.js
+!tests/*.ts

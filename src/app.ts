@@ -59,6 +59,11 @@ export async function createApp() {
     root: publicPath,
   });
 
+  // Health check endpoint
+  app.get('/health', async () => {
+    return { status: 'ok', timestamp: new Date().toISOString() };
+  });
+
   app.post('/assets', async (request, reply) => {
     const payload = assetSchema.parse(request.body);
     const now = new Date().toISOString();

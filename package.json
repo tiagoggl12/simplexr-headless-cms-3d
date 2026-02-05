@@ -11,14 +11,21 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.983.0",
+    "@aws-sdk/s3-request-presigner": "^3.983.0",
     "@fastify/static": "^6.12.0",
+    "@gltf-transform/core": "^4.3.0",
+    "bullmq": "^5.67.2",
     "fastify": "^4.26.2",
+    "ioredis": "^5.9.2",
     "pino": "^9.0.0",
     "uuid": "^10.0.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^20.12.12",
+    "@types/supertest": "^6.0.3",
+    "supertest": "^7.2.2",
     "tsx": "^4.15.4",
     "typescript": "^5.5.4",
     "vitest": "^2.0.5"
