@@ -1,0 +1,53 @@
+// Prisma schema for future Postgres integration
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AssetStatus {
+  draft
+  processing
+  ready
+  failed
+}
+
+model Asset3D {
+  id        String   @id @default(uuid())
+  name      String
+  masterUrl String
+  status    AssetStatus
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  renderPresets RenderPreset[]
+}
+
+model LightingPreset {
+  id        String   @id @default(uuid())
+  name      String
+  hdriUrl   String
+  exposure  Float
+  intensity Float
+  tags      String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  renderPresets RenderPreset[]
+}
+
+model RenderPreset {
+  id               String   @id @default(uuid())
+  assetId          String
+  lightingPresetId String
+  camera           Json
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  asset    Asset3D        @relation(fields: [assetId], references: [id])
+  lighting LightingPreset @relation(fields: [lightingPresetId], references: [id])
+}
