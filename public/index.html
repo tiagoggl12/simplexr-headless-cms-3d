@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SimpleXR Headless CMS 3D - Test Frontend</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>SimpleXR Headless CMS 3D</h1>
+      <p class="subtitle">API Test Interface</p>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="assets">Assets</button>
+      <button class="tab-btn" data-tab="upload">Upload</button>
+      <button class="tab-btn" data-tab="lighting">Lighting Presets</button>
+      <button class="tab-btn" data-tab="render">Render Presets</button>
+      <button class="tab-btn" data-tab="viewer">Viewer</button>
+    </nav>
+
+    <!-- Assets Tab -->
+    <section id="assets" class="tab-content active">
+      <h2>Assets</h2>
+
+      <div class="form-group">
+        <h3>Create Asset</h3>
+        <form id="createAssetForm">
+          <label for="assetName">Name</label>
+          <input type="text" id="assetName" required placeholder="Ex: sofa_modern.glb">
+
+          <label for="assetMasterUrl">Master URL</label>
+          <input type="url" id="assetMasterUrl" required placeholder="Ex: https://cdn.example.com/models/sofa.glb">
+
+          <button type="submit">Create Asset</button>
+        </form>
+      </div>
+
+      <div class="form-group">
+        <h3>Get Asset</h3>
+        <form id="getAssetForm">
+          <label for="getAssetId">Asset ID</label>
+          <input type="text" id="getAssetId" required placeholder="Asset UUID">
+          <button type="submit">Get Asset</button>
+        </form>
+      </div>
+
+      <div class="saved-ids">
+        <h4>Saved Asset IDs</h4>
+        <ul id="savedAssetIds"></ul>
+      </div>
+    </section>
+
+    <!-- Upload Tab -->
+    <section id="upload" class="tab-content">
+      <h2>Upload</h2>
+
+      <div class="form-group">
+        <h3>Get Presigned URL</h3>
+        <form id="presignForm">
+          <label for="uploadPath">Path</label>
+          <input type="text" id="uploadPath" required placeholder="Ex: uploads/model.glb">
+
+          <button type="submit">Get Presigned URL</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Lighting Presets Tab -->
+    <section id="lighting" class="tab-content">
+      <h2>Lighting Presets</h2>
+
+      <div class="form-group">
+        <h3>Create Lighting Preset</h3>
+        <form id="createLightingForm">
+          <label for="lightingName">Name</label>
+          <input type="text" id="lightingName" required placeholder="Ex: Studio Soft">
+
+          <label for="lightingHdriUrl">HDRI URL</label>
+          <input type="url" id="lightingHdriUrl" required placeholder="Ex: https://hdri.example.com/studio.hdr">
+
+          <label for="lightingExposure">Exposure</label>
+          <input type="number" id="lightingExposure" step="0.1" value="1.0" required>
+
+          <label for="lightingIntensity">Intensity</label>
+          <input type="number" id="lightingIntensity" step="0.1" value="1.0" required>
+
+          <label for="lightingTags">Tags (comma-separated)</label>
+          <input type="text" id="lightingTags" placeholder="Ex: studio, indoor, soft">
+
+          <button type="submit">Create Preset</button>
+        </form>
+      </div>
+
+      <div class="form-group">
+        <h3>List Lighting Presets</h3>
+        <form id="listPresetsForm">
+          <label for="filterTag">Filter by Tag (optional)</label>
+          <input type="text" id="filterTag" placeholder="Ex: studio">
+          <button type="submit">List Presets</button>
+        </form>
+      </div>
+
+      <div class="saved-ids">
+        <h4>Saved Lighting Preset IDs</h4>
+        <ul id="savedLightingIds"></ul>
+      </div>
+    </section>
+
+    <!-- Render Presets Tab -->
+    <section id="render" class="tab-content">
+      <h2>Render Presets</h2>
+
+      <div class="form-group">
+        <h3>Create Render Preset</h3>
+        <form id="createRenderForm">
+          <label for="renderAssetId">Asset ID</label>
+          <input type="text" id="renderAssetId" required placeholder="Asset UUID">
+
+          <label for="renderLightingId">Lighting Preset ID</label>
+          <input type="text" id="renderLightingId" required placeholder="Lighting UUID">
+
+          <fieldset>
+            <legend>Camera</legend>
+            <label for="cameraFov">FOV</label>
+            <input type="number" id="cameraFov" value="45" required>
+
+            <label for="cameraPos">Position (x, y, z)</label>
+            <input type="text" id="cameraPos" placeholder="0, 2, 5" required>
+
+            <label for="cameraTarget">Target (x, y, z)</label>
+            <input type="text" id="cameraTarget" placeholder="0, 0, 0" required>
+          </fieldset>
+
+          <button type="submit">Create Render Preset</button>
+        </form>
+      </div>
+
+      <div class="saved-ids">
+        <h4>Saved Render Preset IDs</h4>
+        <ul id="savedRenderIds"></ul>
+      </div>
+    </section>
+
+    <!-- Viewer Tab -->
+    <section id="viewer" class="tab-content">
+      <h2>Viewer Endpoints</h2>
+
+      <div class="form-group">
+        <h3>Get Asset for Viewer</h3>
+        <form id="viewerAssetForm">
+          <label for="viewerAssetId">Asset ID</label>
+          <input type="text" id="viewerAssetId" required placeholder="Asset UUID">
+          <button type="submit">Get Viewer Asset</button>
+        </form>
+      </div>
+
+      <div class="form-group">
+        <h3>Get Render Manifest</h3>
+        <form id="renderManifestForm">
+          <label for="manifestAssetId">Asset ID</label>
+          <input type="text" id="manifestAssetId" required placeholder="Asset UUID">
+
+          <label for="manifestPresetId">Render Preset ID</label>
+          <input type="text" id="manifestPresetId" required placeholder="Render Preset UUID">
+
+          <label for="manifestDevice">Device</label>
+          <select id="manifestDevice">
+            <option value="">Default (Desktop)</option>
+            <option value="mobile">Mobile</option>
+          </select>
+
+          <button type="submit">Get Render Manifest</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Response Section -->
+    <section class="response-section">
+      <h2>Response</h2>
+      <div class="response-meta">
+        <span id="responseStatus"></span>
+        <button id="clearResponse" class="btn-small">Clear</button>
+      </div>
+      <pre id="responseBody"></pre>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

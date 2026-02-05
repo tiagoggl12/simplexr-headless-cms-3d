@@ -1,13 +1,24 @@
 import Fastify from 'fastify';
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 import { MemoryStore } from './store.js';
 import { LocalStorageService } from './services/storage.js';
-import { Asset3D, LightingPreset, RenderManifest, RenderPreset } from './models.js';
+import { Asset3D, AssetStatus, LightingPreset, RenderManifest, RenderPreset } from './models.js';
+
+const require = createRequire(import.meta.url);
+const fastifyStatic = require('@fastify/static');
 
 const assetSchema = z.object({
   name: z.string().min(1),
   masterUrl: z.string().min(1),
+});
+
+const assetUpdateSchema = z.object({
+  name: z.string().min(1).optional(),
+  status: z.enum(['draft', 'processing', 'ready', 'failed']).optional(),
 });
 
 const lightingPresetSchema = z.object({
@@ -16,6 +27,14 @@ const lightingPresetSchema = z.object({
   exposure: z.number(),
   intensity: z.number(),
   tags: z.array(z.string()).default([]),
+});
+
+const lightingPresetUpdateSchema = z.object({
+  name: z.string().min(1).optional(),
+  hdriUrl: z.string().min(1).optional(),
+  exposure: z.number().optional(),
+  intensity: z.number().optional(),
+  tags: z.array(z.string()).optional(),
 });
 
 const renderPresetSchema = z.object({
@@ -32,6 +51,13 @@ export async function createApp() {
   const app = Fastify({ logger: false });
   const store = new MemoryStore();
   const storage = new LocalStorageService(process.env.STORAGE_BASE_URL ?? 's3://bucket');
+
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const publicPath = path.resolve(__dirname, '../public');
+
+  app.register(fastifyStatic, {
+    root: publicPath,
+  });
 
   app.post('/assets', async (request, reply) => {
     const payload = assetSchema.parse(request.body);
@@ -151,6 +177,103 @@ export async function createApp() {
     };
 
     return reply.send(manifest);
+  });
+
+  // ===== Admin API Endpoints =====
+
+  // List all assets with optional filters
+  app.get('/assets', async (request, reply) => {
+    const query = request.query as {
+      status?: AssetStatus;
+      limit?: string;
+      offset?: string;
+    };
+
+    const result = store.listAssets({
+      status: query.status,
+      limit: query.limit ? parseInt(query.limit, 10) : undefined,
+      offset: query.offset ? parseInt(query.offset, 10) : undefined,
+    });
+
+    return reply.send(result);
+  });
+
+  // Update asset
+  app.patch('/assets/:id', async (request, reply) => {
+    const id = (request.params as { id: string }).id;
+    const updates = assetUpdateSchema.parse(request.body);
+
+    const updated = store.updateAsset(id, updates);
+    if (!updated) return reply.status(404).send({ error: 'asset_not_found' });
+
+    return reply.send(updated);
+  });
+
+  // Delete asset
+  app.delete('/assets/:id', async (request, reply) => {
+    const id = (request.params as { id: string }).id;
+
+    const deleted = store.deleteAsset(id);
+    if (!deleted) return reply.status(404).send({ error: 'asset_not_found' });
+
+    return reply.status(204).send();
+  });
+
+  // List all lighting presets
+  app.get('/presets/lighting', async (request, reply) => {
+    const tag = (request.query as { tag?: string }).tag;
+    const presets = store.listLightingPresets(tag);
+    return reply.send({ items: presets });
+  });
+
+  // Update lighting preset
+  app.patch('/presets/lighting/:id', async (request, reply) => {
+    const id = (request.params as { id: string }).id;
+    const updates = lightingPresetUpdateSchema.parse(request.body);
+
+    const updated = store.updateLightingPreset(id, updates);
+    if (!updated) return reply.status(404).send({ error: 'lighting_preset_not_found' });
+
+    return reply.send(updated);
+  });
+
+  // Delete lighting preset
+  app.delete('/presets/lighting/:id', async (request, reply) => {
+    const id = (request.params as { id: string }).id;
+
+    const deleted = store.deleteLightingPreset(id);
+    if (!deleted) return reply.status(404).send({ error: 'lighting_preset_not_found' });
+
+    return reply.status(204).send();
+  });
+
+  // List all render presets
+  app.get('/presets/render', async (request, reply) => {
+    const query = request.query as { assetId?: string };
+    const presets = store.listRenderPresets({ assetId: query.assetId });
+
+    // Enrich with asset and lighting names
+    const enriched = presets.map((preset) => {
+      const asset = store.getAsset(preset.assetId);
+      const lighting = store.getLightingPreset(preset.lightingPresetId);
+      return {
+        ...preset,
+        assetName: asset?.name ?? 'Unknown Asset',
+        lightingPresetName: lighting?.name ?? 'Unknown Lighting',
+      };
+    });
+
+    return reply.send({ items: enriched });
+  });
+
+  // Delete render preset
+  app.delete('/presets/render/:id', async (request, reply) => {
+    const id = (request.params as { id: string }).id;
+
+    const deleted = store.deleteRenderPreset(id);
+    if (!deleted) return reply.status(404).send({ error: 'render_preset_not_found' });
+
+    return reply.status(204).send();
   });
 
   return app;
