@@ -288,4 +288,269 @@ describe('Integration Tests', () => {
       });
     });
   });
+
+  describe('Material Variant Endpoints', () => {
+    let testAssetId: string;
+
+    beforeAll(async () => {
+      // Create a test asset for variant tests
+      const assetRes = await app.inject({
+        method: 'POST',
+        url: '/assets',
+        payload: {
+          name: 'Variant Test Asset',
+          masterUrl: 's3://bucket/assets/variant-test.glb',
+        },
+      });
+      testAssetId = assetRes.json().id;
+    });
+
+    describe('POST /variants', () => {
+      it('creates a new material variant', async () => {
+        const payload = {
+          assetId: testAssetId,
+          name: 'Oak Wood Finish',
+          baseColor: '#8B5A2B',
+          roughness: 0.7,
+          metallic: 0.0,
+        };
+
+        const res = await app.inject({
+          method: 'POST',
+          url: '/variants',
+          payload,
+        });
+
+        expect(res.statusCode).toBe(201);
+        const body = res.json();
+        expect(body).toHaveProperty('id');
+        expect(body).toHaveProperty('assetId', testAssetId);
+        expect(body).toHaveProperty('name', payload.name);
+        expect(body).toHaveProperty('baseColor', payload.baseColor);
+        expect(body).toHaveProperty('roughness', payload.roughness);
+        expect(body).toHaveProperty('metallic', payload.metallic);
+        expect(body).toHaveProperty('status', 'draft');
+        expect(body).toHaveProperty('createdAt');
+      });
+
+      it('creates variant with PBR texture maps', async () => {
+        const payload = {
+          assetId: testAssetId,
+          name: 'Chrome Finish',
+          albedoMapUrl: 'https://example.com/textures/chrome_albedo.png',
+          normalMapUrl: 'https://example.com/textures/chrome_normal.png',
+          metallicMapUrl: 'https://example.com/textures/chrome_metallic.png',
+          roughnessMapUrl: 'https://example.com/textures/chrome_roughness.png',
+          aoMapUrl: 'https://example.com/textures/chrome_ao.png',
+          metallic: 1.0,
+          roughness: 0.2,
+        };
+
+        const res = await app.inject({
+          method: 'POST',
+          url: '/variants',
+          payload,
+        });
+
+        expect(res.statusCode).toBe(201);
+        const body = res.json();
+        expect(body).toHaveProperty('id');
+        expect(body).toHaveProperty('albedoMapUrl', payload.albedoMapUrl);
+        expect(body).toHaveProperty('normalMapUrl', payload.normalMapUrl);
+        expect(body).toHaveProperty('metallicMapUrl', payload.metallicMapUrl);
+        expect(body).toHaveProperty('roughnessMapUrl', payload.roughnessMapUrl);
+        expect(body).toHaveProperty('aoMapUrl', payload.aoMapUrl);
+      });
+
+      it('returns 404 for non-existent asset', async () => {
+        const res = await app.inject({
+          method: 'POST',
+          url: '/variants',
+          payload: {
+            assetId: '00000000-0000-0000-0000-000000000000',
+            name: 'Test Variant',
+          },
+        });
+
+        expect(res.statusCode).toBe(404);
+        const body = res.json();
+        expect(body.error).toBe('asset_not_found');
+      });
+
+      it('validates required fields', async () => {
+        const res = await app.inject({
+          method: 'POST',
+          url: '/variants',
+          payload: { name: 'Missing assetId' },
+        });
+
+        expect(res.statusCode).toBe(500);
+      });
+    });
+
+    describe('GET /variants/:id', () => {
+      it('returns a material variant by id', async () => {
+        // Create a variant first
+        const created = await app.inject({
+          method: 'POST',
+          url: '/variants',
+          payload: {
+            assetId: testAssetId,
+            name: 'Matte Black',
+            baseColor: '#000000',
+            roughness: 0.9,
+          },
+        });
+        const variant = created.json();
+
+        const res = await app.inject({
+          method: 'GET',
+          url: `/variants/${variant.id}`,
+        });
+
+        expect(res.statusCode).toBe(200);
+        const body = res.json();
+        expect(body).toHaveProperty('id', variant.id);
+        expect(body).toHaveProperty('name', 'Matte Black');
+      });
+
+      it('returns 404 for non-existent variant', async () => {
+        const res = await app.inject({
+          method: 'GET',
+          url: '/variants/00000000-0000-0000-0000-000000000000',
+        });
+
+        expect(res.statusCode).toBe(404);
+        const body = res.json();
+        expect(body.error).toBe('variant_not_found');
+      });
+    });
+
+    describe('GET /variants', () => {
+      it('lists variants for an asset', async () => {
+        // Create a couple of variants
+        await app.inject({
+          method: 'POST',
+          url: '/variants',
+          payload: { assetId: testAssetId, name: 'Variant A' },
+        });
+        await app.inject({
+          method: 'POST',
+          url: '/variants',
+          payload: { assetId: testAssetId, name: 'Variant B' },
+        });
+
+        const res = await app.inject({
+          method: 'GET',
+          url: `/variants?assetId=${testAssetId}`,
+        });
+
+        expect(res.statusCode).toBe(200);
+        const body = res.json();
+        expect(body).toHaveProperty('items');
+        expect(Array.isArray(body.items)).toBe(true);
+        expect(body.items.length).toBeGreaterThan(0);
+        // All items should belong to the test asset
+        body.items.forEach((item: { assetId: string }) => {
+          expect(item.assetId).toBe(testAssetId);
+        });
+      });
+
+      it('requires assetId parameter', async () => {
+        const res = await app.inject({
+          method: 'GET',
+          url: '/variants',
+        });
+
+        expect(res.statusCode).toBe(400);
+        const body = res.json();
+        expect(body.error).toBe('assetId_required');
+      });
+    });
+
+    describe('PATCH /variants/:id', () => {
+      it('updates a material variant', async () => {
+        // Create a variant first
+        const created = await app.inject({
+          method: 'POST',
+          url: '/variants',
+          payload: {
+            assetId: testAssetId,
+            name: 'Original Name',
+            roughness: 0.5,
+          },
+        });
+        const variant = created.json();
+
+        const res = await app.inject({
+          method: 'PATCH',
+          url: `/variants/${variant.id}`,
+          payload: {
+            name: 'Updated Name',
+            roughness: 0.8,
+            baseColor: '#FF0000',
+          },
+        });
+
+        expect(res.statusCode).toBe(200);
+        const body = res.json();
+        expect(body).toHaveProperty('id', variant.id);
+        expect(body).toHaveProperty('name', 'Updated Name');
+        expect(body).toHaveProperty('roughness', 0.8);
+        expect(body).toHaveProperty('baseColor', '#FF0000');
+      });
+
+      it('returns 404 for non-existent variant', async () => {
+        const res = await app.inject({
+          method: 'PATCH',
+          url: '/variants/00000000-0000-0000-0000-000000000000',
+          payload: { name: 'Updated' },
+        });
+
+        expect(res.statusCode).toBe(404);
+        const body = res.json();
+        expect(body.error).toBe('variant_not_found');
+      });
+    });
+
+    describe('DELETE /variants/:id', () => {
+      it('deletes a material variant', async () => {
+        // Create a variant first
+        const created = await app.inject({
+          method: 'POST',
+          url: '/variants',
+          payload: {
+            assetId: testAssetId,
+            name: 'To Be Deleted',
+          },
+        });
+        const variant = created.json();
+
+        const res = await app.inject({
+          method: 'DELETE',
+          url: `/variants/${variant.id}`,
+        });
+
+        expect(res.statusCode).toBe(204);
+
+        // Verify it's deleted
+        const getRes = await app.inject({
+          method: 'GET',
+          url: `/variants/${variant.id}`,
+        });
+        expect(getRes.statusCode).toBe(404);
+      });
+
+      it('returns 404 for non-existent variant', async () => {
+        const res = await app.inject({
+          method: 'DELETE',
+          url: '/variants/00000000-0000-0000-0000-000000000000',
+        });
+
+        expect(res.statusCode).toBe(404);
+        const body = res.json();
+        expect(body.error).toBe('variant_not_found');
+      });
+    });
+  });
 });

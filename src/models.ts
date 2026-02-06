@@ -43,3 +43,24 @@ export interface RenderManifest {
   camera: RenderPreset['camera'];
   qualityProfile: 'desktop' | 'mobile';
 }
+
+export type MaterialVariantStatus = 'draft' | 'processing' | 'ready' | 'failed';
+
+export interface MaterialVariant {
+  id: string;
+  assetId: string;
+  name: string;
+  // PBR texture maps
+  albedoMapUrl?: string;
+  normalMapUrl?: string;
+  metallicMapUrl?: string;
+  roughnessMapUrl?: string;
+  aoMapUrl?: string;
+  emissiveMapUrl?: string;
+  // PBR scalar values
+  baseColor?: string; // hex color
+  metallic?: number;
+  roughness?: number;
+  status: MaterialVariantStatus;
+  createdAt: string;
+}

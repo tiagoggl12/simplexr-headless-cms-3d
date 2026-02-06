@@ -1,4 +1,5 @@
-import { Asset3D, AssetStatus, LightingPreset, RenderPreset } from './models.js';
+import { randomUUID } from 'crypto';
+import { Asset3D, AssetStatus, LightingPreset, RenderPreset, MaterialVariant } from './models.js';
 
 interface ListOptions {
   status?: AssetStatus;
@@ -11,6 +12,7 @@ export class MemoryStore {
   assets = new Map<string, Asset3D>();
   lightingPresets = new Map<string, LightingPreset>();
   renderPresets = new Map<string, RenderPreset>();
+  materialVariants = new Map<string, MaterialVariant>();
 
   createAsset(asset: Asset3D) {
     this.assets.set(asset.id, asset);
@@ -117,5 +119,49 @@ export class MemoryStore {
 
   deleteRenderPreset(id: string) {
     return this.renderPresets.delete(id);
+  }
+
+  // Material Variant CRUD methods
+
+  createMaterialVariant(data: Omit<MaterialVariant, 'id' | 'createdAt'>): MaterialVariant {
+    const variant: MaterialVariant = {
+      ...data,
+      id: randomUUID(),
+      createdAt: new Date().toISOString(),
+    };
+    this.materialVariants.set(variant.id, variant);
+    return variant;
+  }
+
+  getMaterialVariant(id: string): MaterialVariant | undefined {
+    return this.materialVariants.get(id);
+  }
+
+  listMaterialVariants(assetId: string): MaterialVariant[] {
+    const variants = Array.from(this.materialVariants.values());
+    const filtered = variants.filter((variant) => variant.assetId === assetId);
+    // Sort by createdAt descending (newest first)
+    filtered.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return filtered;
+  }
+
+  updateMaterialVariant(
+    id: string,
+    updates: Partial<Omit<MaterialVariant, 'id' | 'createdAt'>>
+  ): MaterialVariant | undefined {
+    const variant = this.materialVariants.get(id);
+    if (!variant) return undefined;
+
+    const updated: MaterialVariant = {
+      ...variant,
+      ...updates,
+    };
+
+    this.materialVariants.set(id, updated);
+    return updated;
+  }
+
+  deleteMaterialVariant(id: string): boolean {
+    return this.materialVariants.delete(id);
   }
 }

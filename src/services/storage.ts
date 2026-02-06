@@ -4,7 +4,11 @@ export interface PresignedUpload {
   headers: Record<string, string>;
 }
 
-export class LocalStorageService {
+export interface StorageService {
+  presignUpload(path: string): Promise<PresignedUpload>;
+}
+
+export class LocalStorageService implements StorageService {
   constructor(private readonly baseUrl: string) {}
 
   async presignUpload(path: string): Promise<PresignedUpload> {

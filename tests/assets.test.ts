@@ -87,9 +87,12 @@ describe('Asset API', () => {
 
     expect(res.statusCode).toBe(200);
     const body = res.json();
-    expect(body.asset.id).toBe(asset.id);
-    expect(body.lighting.id).toBe(lighting.id);
-    expect(body.camera.fov).toBe(45);
+    expect(body.version).toBe('1.0');
+    expect(body.manifest.asset.id).toBe(asset.id);
+    expect(body.manifest.lighting.id).toBe(lighting.id);
+    expect(body.manifest.camera.fov).toBe(45);
+    expect(body.manifest.quality.shadows).toBe(false); // mobile profile
+    expect(body.manifest.quality.antialiasing).toBe('none');
     await app.close();
   });
 });
