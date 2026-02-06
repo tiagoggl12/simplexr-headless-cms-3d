@@ -296,17 +296,35 @@ export async function createApp() {
     };
 
     try {
-      // Use render preset if specified, otherwise generate with defaults
-      const manifest = presetId
-        ? await renderManifestService.generate({
+      if (!presetId) {
+        // No preset specified, use defaults
+        const manifest = await renderManifestService.generateDefault(assetId, device);
+        return reply.send(manifest);
+      }
+
+      // Try as render preset first, then fall back to lighting preset
+      try {
+        const manifest = await renderManifestService.generate({
+          assetId,
+          renderPresetId: presetId,
+          materialVariantId: variantId,
+          device,
+        });
+        return reply.send(manifest);
+      } catch (err: unknown) {
+        const error = err as { code?: string };
+        if (error.code === 'render_preset_not_found') {
+          // Fall back to lighting preset
+          const manifest = await renderManifestService.generate({
             assetId,
-            renderPresetId: presetId,
+            lightingPresetId: presetId,
             materialVariantId: variantId,
             device,
-          })
-        : await renderManifestService.generateDefault(assetId, device);
-
-      return reply.send(manifest);
+          });
+          return reply.send(manifest);
+        }
+        throw err;
+      }
     } catch (err) {
       const error = err as { code?: string; message?: string };
       if (error.code === 'asset_not_found') {

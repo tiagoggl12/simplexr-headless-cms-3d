@@ -153,6 +153,7 @@ export class RenderManifestService {
   async generate(params: GenerateParams): Promise<RenderManifest> {
     const {
       assetId,
+      materialVariantId,
       lightingPresetId,
       renderPresetId,
       device = 'desktop',
@@ -162,6 +163,19 @@ export class RenderManifestService {
     const asset = await this.store.getAsset(assetId);
     if (!asset) {
       createError('asset_not_found', `Asset with id ${assetId} not found`);
+    }
+
+    // Fetch material variant if specified
+    let materialVariant: MaterialVariant | undefined;
+    if (materialVariantId) {
+      const variant = await this.store.getMaterialVariant?.(materialVariantId);
+      if (!variant) {
+        createError('material_variant_not_found', `Material variant with id ${materialVariantId} not found`);
+      }
+      if (variant.assetId !== assetId) {
+        createError('invalid_material_variant', `Material variant ${materialVariantId} is for a different asset`, 400);
+      }
+      materialVariant = variant;
     }
 
     // Resolve lighting preset
@@ -204,6 +218,7 @@ export class RenderManifestService {
 
     return this.buildManifest({
       asset,
+      materialVariant,
       lighting,
       camera,
       quality: QUALITY_PROFILES[device],
@@ -235,39 +250,61 @@ export class RenderManifestService {
    */
   private buildManifest(params: {
     asset: Asset3D;
+    materialVariant?: MaterialVariant;
     lighting: LightingPreset;
     camera: RenderPreset['camera'];
     quality: typeof QUALITY_PROFILES[DeviceType];
   }): RenderManifest {
-    const { asset, lighting, camera, quality } = params;
+    const { asset, materialVariant, lighting, camera, quality } = params;
+
+    const manifest: RenderManifest['manifest'] = {
+      asset: {
+        id: asset.id,
+        name: asset.name,
+        url: asset.masterUrl,
+        format: 'glb',
+      },
+      lighting: {
+        id: lighting.id,
+        name: lighting.name,
+        hdri: lighting.hdriUrl,
+        exposure: lighting.exposure,
+        intensity: lighting.intensity,
+      },
+      camera: {
+        position: camera.position,
+        target: camera.target,
+        fov: camera.fov,
+      },
+      quality: {
+        shadows: quality.shadows,
+        antialiasing: quality.antialiasing,
+        tonemapping: quality.tonemapping,
+      },
+    };
+
+    // Add material variant if specified
+    if (materialVariant) {
+      manifest.material = {
+        id: materialVariant.id,
+        name: materialVariant.name,
+        pbr: {
+          albedoMap: materialVariant.albedoMapUrl,
+          normalMap: materialVariant.normalMapUrl,
+          metallicMap: materialVariant.metallicMapUrl,
+          roughnessMap: materialVariant.roughnessMapUrl,
+          aoMap: materialVariant.aoMapUrl,
+          emissiveMap: materialVariant.emissiveMapUrl,
+          baseColor: materialVariant.baseColor,
+          metallic: materialVariant.metallic,
+          roughness: materialVariant.roughness,
+        },
+      };
+    }
 
     return {
       version: this.schemaVersion,
-      manifest: {
-        asset: {
-          id: asset.id,
-          name: asset.name,
-          url: asset.masterUrl,
-          format: 'glb',
-        },
-        lighting: {
-          id: lighting.id,
-          name: lighting.name,
-          hdri: lighting.hdriUrl,
-          exposure: lighting.exposure,
-          intensity: lighting.intensity,
-        },
-        camera: {
-          position: camera.position,
-          target: camera.target,
-          fov: camera.fov,
-        },
-        quality: {
-          shadows: quality.shadows,
-          antialiasing: quality.antialiasing,
-          tonemapping: quality.tonemapping,
-        },
-      },
+      manifest,
     };
   }
 }
