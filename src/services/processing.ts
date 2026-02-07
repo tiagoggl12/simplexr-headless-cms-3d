@@ -1,7 +1,9 @@
 import { MemoryStore } from '../store.js';
-import { AssetStatus } from '../models.js';
+import { AssetStatus, TextureFormat, LODLevel, ProcessingStatus } from '../models.js';
 import { RedisQueueService } from './redis-queue.js';
 import { NodeIO } from '@gltf-transform/core';
+import { KTX2Processor, type KTX2CompressionOptions } from './ktx-processor.js';
+import { LODGenerator, type LODGenerationOptions } from './lod-generator.js';
 
 /**
  * Result of a GLB validation
@@ -43,6 +45,24 @@ export interface ThumbnailResult {
 }
 
 /**
+ * V3: Result of KTX2 compression
+ */
+export interface KTX2Result {
+  success: boolean;
+  textureFormat?: TextureFormat;
+  message: string;
+}
+
+/**
+ * V3: Result of LOD generation
+ */
+export interface LODResult {
+  success: boolean;
+  lods?: LODLevel[];
+  message: string;
+}
+
+/**
  * Processing pipeline configuration
  */
 export interface ProcessingConfig {
@@ -50,6 +70,11 @@ export interface ProcessingConfig {
   enableCompression: boolean;
   textureQuality: number; // 0-100, lower = more compression
   enableDracoCompression: boolean;
+  // V3 options
+  enableKTX2?: boolean; // Enable KTX2 texture compression
+  enableLODs?: boolean; // Enable automatic LOD generation
+  ktx2Quality?: number; // KTX2 quality 1-10
+  lodLevels?: number; // Number of LOD levels to generate (1-3)
 }
 
 const DEFAULT_CONFIG: ProcessingConfig = {
@@ -57,15 +82,23 @@ const DEFAULT_CONFIG: ProcessingConfig = {
   enableCompression: true,
   textureQuality: 75,
   enableDracoCompression: false, // Requires Draco setup
+  // V3 defaults
+  enableKTX2: true, // Enable KTX2 by default for new assets
+  enableLODs: true, // Enable LOD generation by default
+  ktx2Quality: 8, // Default KTX2 quality
+  lodLevels: 3, // Generate 3 LOD levels by default
 };
 
 /**
  * Service for processing 3D assets in the pipeline
- * Handles validation, optimization, USDZ conversion, and thumbnail generation
+ * Handles validation, optimization, USDZ conversion, thumbnail generation
+ * V3: KTX2 compression and LOD generation
  */
 export class ProcessingService {
   private io: NodeIO;
   private config: ProcessingConfig;
+  private ktx2Processor: KTX2Processor;
+  private lodGenerator: LODGenerator;
 
   constructor(
     private store: MemoryStore,
@@ -77,6 +110,10 @@ export class ProcessingService {
     // Initialize glTF Transform IO
     this.io = new NodeIO()
       .setAllowNetwork(false); // Security: don't fetch external resources
+
+    // Initialize V3 processors
+    this.ktx2Processor = new KTX2Processor();
+    this.lodGenerator = new LODGenerator();
   }
 
   /**
@@ -340,6 +377,235 @@ export class ProcessingService {
       console.error(`[Processing] Pipeline failed for asset ${assetId}:`, error);
       this.store.updateAsset(assetId, { status: 'failed' });
       throw error;
+    }
+  }
+
+  /**
+   * V3: Run KTX2 texture compression for an asset
+   *
+   * @param assetId Asset ID
+   * @param glbUrl URL to the GLB file
+   * @param options Compression options
+   * @returns KTX2 compression result
+   */
+  async compressKTX2(
+    assetId: string,
+    glbUrl: string,
+    options?: KTX2CompressionOptions
+  ): Promise<KTX2Result> {
+    console.log(`[Processing] Starting KTX2 compression for asset ${assetId}`);
+
+    // Update processing status
+    const asset = this.store.getAsset(assetId);
+    if (!asset) {
+      throw new Error(`Asset not found: ${assetId}`);
+    }
+
+    const processingStatus = asset.processingStatus || {};
+    processingStatus.ktx2 = 'processing';
+    this.store.updateAsset(assetId, { processingStatus });
+
+    try {
+      // Perform compression
+      const result = await this.ktx2Processor.compressTextures(glbUrl, {
+        quality: options?.quality ?? this.config.ktx2Quality,
+        formats: options?.formats ?? ['ktx2'],
+        generateMipmaps: options?.generateMipmaps ?? true,
+      });
+
+      // Create texture format metadata
+      const textureFormat: TextureFormat = {
+        format: 'ktx2',
+        url: result.ktx2Url,
+        size: result.originalSize,
+        compressedSize: result.compressedSize,
+      };
+
+      // Update asset with KTX2 format
+      const textureFormats = asset.textureFormats || [];
+      const existingIndex = textureFormats.findIndex(f => f.format === 'ktx2');
+      if (existingIndex >= 0) {
+        textureFormats[existingIndex] = textureFormat;
+      } else {
+        textureFormats.push(textureFormat);
+      }
+
+      processingStatus.ktx2 = 'ready';
+      this.store.updateAsset(assetId, {
+        textureFormats,
+        processingStatus,
+      });
+
+      console.log(
+        `[Processing] KTX2 compression complete for asset ${assetId}: ` +
+        `${result.compressionRatio.toFixed(1)}% size reduction`
+      );
+
+      return {
+        success: true,
+        textureFormat,
+        message: `KTX2 compression complete: ${result.compressionRatio.toFixed(1)}% reduction`,
+      };
+    } catch (error) {
+      console.error(`[Processing] KTX2 compression failed for asset ${assetId}:`, error);
+      processingStatus.ktx2 = 'failed';
+      this.store.updateAsset(assetId, { processingStatus });
+      return {
+        success: false,
+        message: `KTX2 compression failed: ${error}`,
+      };
+    }
+  }
+
+  /**
+   * V3: Generate LOD levels for an asset
+   *
+   * @param assetId Asset ID
+   * @param glbUrl URL to the GLB file
+   * @param options LOD generation options
+   * @returns LOD generation result
+   */
+  async generateLODs(
+    assetId: string,
+    glbUrl: string,
+    options?: LODGenerationOptions
+  ): Promise<LODResult> {
+    console.log(`[Processing] Starting LOD generation for asset ${assetId}`);
+
+    // Update processing status
+    const asset = this.store.getAsset(assetId);
+    if (!asset) {
+      throw new Error(`Asset not found: ${assetId}`);
+    }
+
+    const processingStatus = asset.processingStatus || {};
+    processingStatus.lods = 'processing';
+    this.store.updateAsset(assetId, { processingStatus });
+
+    try {
+      // Generate LODs
+      const result = await this.lodGenerator.generateLODs(assetId, glbUrl, options);
+
+      // Update asset with LODs
+      processingStatus.lods = 'ready';
+      this.store.updateAsset(assetId, {
+        lods: result.lods,
+        processingStatus,
+      });
+
+      console.log(
+        `[Processing] LOD generation complete for asset ${assetId}: ` +
+        `${result.lods.length} levels, ${result.totalSizeReduction.toFixed(1)}% size reduction`
+      );
+
+      return {
+        success: true,
+        lods: result.lods,
+        message: `LOD generation complete: ${result.lods.length} levels generated`,
+      };
+    } catch (error) {
+      console.error(`[Processing] LOD generation failed for asset ${assetId}:`, error);
+      processingStatus.lods = 'failed';
+      this.store.updateAsset(assetId, { processingStatus });
+      return {
+        success: false,
+        message: `LOD generation failed: ${error}`,
+      };
+    }
+  }
+
+  /**
+   * V3: Enqueue KTX2 compression job for background processing
+   *
+   * @param assetId Asset ID
+   * @param glbUrl URL to the GLB file
+   * @param options Compression options
+   */
+  async enqueueKTX2Compression(
+    assetId: string,
+    glbUrl: string,
+    options?: KTX2CompressionOptions
+  ): Promise<void> {
+    // Update processing status to pending
+    const asset = this.store.getAsset(assetId);
+    if (!asset) {
+      throw new Error(`Asset not found: ${assetId}`);
+    }
+
+    const processingStatus = asset.processingStatus || {};
+    processingStatus.ktx2 = 'pending';
+    this.store.updateAsset(assetId, { processingStatus });
+
+    // Enqueue background job
+    await this.queue.compressKTX2(assetId, glbUrl, options);
+    console.log(`[Processing] Enqueued KTX2 compression job for asset ${assetId}`);
+  }
+
+  /**
+   * V3: Enqueue LOD generation job for background processing
+   *
+   * @param assetId Asset ID
+   * @param glbUrl URL to the GLB file
+   * @param options LOD generation options
+   */
+  async enqueueLODGeneration(
+    assetId: string,
+    glbUrl: string,
+    options?: LODGenerationOptions
+  ): Promise<void> {
+    // Update processing status to pending
+    const asset = this.store.getAsset(assetId);
+    if (!asset) {
+      throw new Error(`Asset not found: ${assetId}`);
+    }
+
+    const processingStatus = asset.processingStatus || {};
+    processingStatus.lods = 'pending';
+    this.store.updateAsset(assetId, { processingStatus });
+
+    // Enqueue background job
+    await this.queue.generateLODs(assetId, glbUrl, options);
+    console.log(`[Processing] Enqueued LOD generation job for asset ${assetId}`);
+  }
+
+  /**
+   * V3: Run the V3 processing pipeline (KTX2 + LOD)
+   * This runs after the base pipeline completes
+   *
+   * @param assetId Asset ID
+   * @param glbUrl URL to the GLB file
+   */
+  async runV3Pipeline(assetId: string, glbUrl: string): Promise<void> {
+    console.log(`[Processing] Starting V3 pipeline for asset ${assetId}`);
+
+    const asset = this.store.getAsset(assetId);
+    if (!asset) {
+      throw new Error(`Asset not found: ${assetId}`);
+    }
+
+    let ktx2Success = false;
+    let lodSuccess = false;
+
+    // Run KTX2 compression if enabled
+    if (this.config.enableKTX2) {
+      const ktx2Result = await this.compressKTX2(assetId, glbUrl);
+      ktx2Success = ktx2Result.success;
+    }
+
+    // Run LOD generation if enabled
+    if (this.config.enableLODs) {
+      const lodResult = await this.generateLODs(assetId, glbUrl);
+      lodSuccess = lodResult.success;
+    }
+
+    // Update asset status based on results
+    if (ktx2Success || lodSuccess) {
+      this.store.updateAsset(assetId, { status: 'ready' });
+      console.log(`[Processing] V3 pipeline complete for asset ${assetId}`);
+    } else if (this.config.enableKTX2 || this.config.enableLODs) {
+      // If V3 processing was enabled but failed, mark as failed
+      this.store.updateAsset(assetId, { status: 'failed' });
+      throw new Error('V3 pipeline failed');
     }
   }
 

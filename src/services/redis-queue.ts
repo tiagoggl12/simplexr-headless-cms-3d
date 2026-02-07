@@ -5,7 +5,9 @@ export type JobType =
   | 'process-glb'
   | 'generate-usdz'
   | 'generate-thumbnail'
-  | 'optimize-model';
+  | 'optimize-model'
+  | 'ktx2-compress'    // V3: KTX2 texture compression
+  | 'lod-generate';     // V3: LOD generation
 
 export interface ProcessGlbJob {
   assetId: string;
@@ -26,6 +28,33 @@ export interface GenerateThumbnailJob {
 export interface OptimizeModelJob {
   assetId: string;
   glbUrl: string;
+}
+
+/**
+ * V3: KTX2 compression job
+ */
+export interface KTX2CompressJob {
+  assetId: string;
+  glbUrl: string;
+  quality?: number; // 1-10
+  formats?: Array<'ktx2' | 'basis'>;
+  generateMipmaps?: boolean;
+}
+
+/**
+ * V3: LOD generation job
+ */
+export interface LODGenerateJob {
+  assetId: string;
+  glbUrl: string;
+  levels?: Array<{
+    level: number;
+    ratio: number;
+    error: number;
+    distance: number;
+  }>;
+  applyWeld?: boolean;
+  applyPrune?: boolean;
 }
 
 export class RedisQueueService {
@@ -74,12 +103,46 @@ export class RedisQueueService {
     await this.enqueue('optimize-model', { assetId, glbUrl });
   }
 
+  // V3: KTX2 compression
+  async compressKTX2(
+    assetId: string,
+    glbUrl: string,
+    options?: {
+      quality?: number;
+      formats?: Array<'ktx2' | 'basis'>;
+      generateMipmaps?: boolean;
+    }
+  ): Promise<void> {
+    await this.enqueue('ktx2-compress', { assetId, glbUrl, ...options });
+  }
+
+  // V3: LOD generation
+  async generateLODs(
+    assetId: string,
+    glbUrl: string,
+    options?: {
+      levels?: Array<{
+        level: number;
+        ratio: number;
+        error: number;
+        distance: number;
+      }>;
+      applyWeld?: boolean;
+      applyPrune?: boolean;
+    }
+  ): Promise<void> {
+    await this.enqueue('lod-generate', { assetId, glbUrl, ...options });
+  }
+
   // Start worker with job handlers
   async startWorkers(handlers: {
     onProcessGlb?: (job: any) => Promise<void>;
     onGenerateUsdz?: (job: any) => Promise<void>;
     onGenerateThumbnail?: (job: any) => Promise<void>;
     onOptimizeModel?: (job: any) => Promise<void>;
+    // V3 handlers
+    onKTX2Compress?: (job: any) => Promise<void>;
+    onLODGenerate?: (job: any) => Promise<void>;
   }): Promise<void> {
     const connection = {
       host: process.env.REDIS_HOST || 'localhost',
@@ -113,6 +176,17 @@ export class RedisQueueService {
             case 'optimize-model':
               if (handlers.onOptimizeModel) {
                 await handlers.onOptimizeModel(job);
+              }
+              break;
+            // V3 job handlers
+            case 'ktx2-compress':
+              if (handlers.onKTX2Compress) {
+                await handlers.onKTX2Compress(job);
+              }
+              break;
+            case 'lod-generate':
+              if (handlers.onLODGenerate) {
+                await handlers.onLODGenerate(job);
               }
               break;
             default:
