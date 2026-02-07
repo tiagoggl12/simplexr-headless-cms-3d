@@ -16,6 +16,10 @@ enum AssetStatus {
   failed
 }
 
+// ============================================
+// V0: Core Models
+// ============================================
+
 model Asset3D {
   id        String   @id @default(uuid())
   name      String
@@ -24,7 +28,31 @@ model Asset3D {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  renderPresets RenderPreset[]
+  // V2: Material Variants
+  hasMaterialVariants Boolean?
+  textureFormats      Json?
+  lods                Json?
+
+  // V3: Processing status tracking
+  processingStatus Json?
+
+  // V4: USDZ and thumbnails
+  usdzUrl     String?
+  thumbnails  Json?
+
+  // Relations
+  renderPresets      RenderPreset[]
+  materialVariants   MaterialVariant[]
+  customFieldValues  CustomFieldValue[]
+  workflowEvents     WorkflowEvent[]
+  exportJobs         ExportJob[]
+  assetViews         AssetView[]
+  assetTags          AssetTag[]
+  assetCategories    AssetCategory[]
+  collectionAssets   CollectionAsset[]
+
+  @@index([status])
+  @@index([createdAt])
 }
 
 model LightingPreset {
@@ -48,6 +76,292 @@ model RenderPreset {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  asset    Asset3D        @relation(fields: [assetId], references: [id])
-  lighting LightingPreset @relation(fields: [lightingPresetId], references: [id])
+  asset    Asset3D        @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  lighting LightingPreset @relation(fields: [lightingPresetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+}
+
+model MaterialVariant {
+  id        String   @id @default(uuid())
+  assetId   String
+  name      String
+  albedoMapUrl   String?
+  normalMapUrl   String?
+  metallicMapUrl String?
+  roughnessMapUrl String?
+  aoMapUrl       String?
+  emissiveMapUrl String?
+  baseColor      String?
+  metallic       Float?
+  roughness      Float?
+  status         MaterialVariantStatus
+  createdAt      DateTime @default(now())
+
+  asset Asset3D @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+}
+
+enum MaterialVariantStatus {
+  draft
+  processing
+  ready
+  failed
+}
+
+// ============================================
+// V5: Custom Fields / Metadados
+// ============================================
+
+model AssetType {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  icon        String?
+  fields      Json     // CustomField[]
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  assets Asset[]
+}
+
+model CustomFieldValue {
+  id        String   @id @default(uuid())
+  assetId   String
+  assetTypeId String?
+  fieldId   String   // reference to CustomField in AssetType.fields
+  value     Json     // valor tipado
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  asset    Asset3D  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  assetType AssetType? @relation(fields: [assetTypeId], references: [id], onDelete: SetNull)
+
+  @@unique([assetId, fieldId])
+  @@index([assetId])
+  @@index([fieldId])
+}
+
+// ============================================
+// V5: Asset Lifecycle Workflow
+// ============================================
+
+enum WorkflowStatus {
+  draft
+  review
+  approved
+  published
+  archived
+  deleted
+  rejected
+}
+
+model WorkflowEvent {
+  id        String   @id @default(uuid())
+  assetId   String
+  fromStatus WorkflowStatus
+  toStatus   WorkflowStatus
+  userId     String
+  userName   String?
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  asset Asset3D @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@index([createdAt])
+}
+
+// ============================================
+// V5: Multi-Format Export
+// ============================================
+
+enum ExportFormat {
+  gltf
+  glb
+  obj
+  usdz
+  stl
+  fbx
+}
+
+enum ExportStatus {
+  pending
+  processing
+  completed
+  failed
+  cancelled
+}
+
+model ExportJob {
+  id          String      @id @default(uuid())
+  assetId     String
+  format      ExportFormat
+  options     Json        // ExportOptions
+  status      ExportStatus @default(pending)
+  progress    Int         @default(0)
+  resultUrl   String?
+  resultFiles Json?       // ExportFile[]
+  fileSize    Int?
+  error       String?
+  createdBy   String?
+  createdAt   DateTime    @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  asset Asset3D @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId, status])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ============================================
+// V5: Asset Analytics
+// ============================================
+
+model AssetView {
+  id        String   @id @default(uuid())
+  assetId   String
+  userId    String?  // null for anonymous views
+  sessionId String?  // for tracking session
+  duration  Int?     // duration in ms
+  referrer  String?
+  userAgent String?
+  ipAddress String?  // hashed for privacy
+  context   Json?    // device, browser, os, country
+  createdAt DateTime @default(now())
+
+  asset Asset3D @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId, createdAt])
+  @@index([userId])
+  @@index([sessionId])
+}
+
+model AssetDownload {
+  id        String   @id @default(uuid())
+  assetId   String
+  format    String?
+  userId    String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([assetId])
+  @@index([createdAt])
+}
+
+model AssetShare {
+  id        String   @id @default(uuid())
+  assetId   String
+  platform  String   // email, twitter, facebook, link, embed, other
+  userId    String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([assetId])
+  @@index([createdAt])
+}
+
+// ============================================
+// V4: Tags and Categories
+// ============================================
+
+model Tag {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  color       String?
+  description String?
+  parentId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  parent      Tag?          @relation("TagHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Tag[]         @relation("TagHierarchy")
+  assetTags   AssetTag[]
+
+  @@index([slug])
+}
+
+model AssetTag {
+  id        String   @id @default(uuid())
+  assetId   String
+  tagId     String
+  createdAt DateTime @default(now())
+
+  asset Asset3D @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  tag   Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, tagId])
+  @@index([assetId])
+  @@index([tagId])
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  icon        String?
+  parentId    String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  parent          Category?        @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children        Category[]       @relation("CategoryHierarchy")
+  assetCategories AssetCategory[]
+
+  @@index([slug])
+  @@index([order])
+}
+
+model AssetCategory {
+  id         String   @id @default(uuid())
+  assetId    String
+  categoryId String
+  createdAt  DateTime @default(now())
+
+  asset    Asset3D   @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  category Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, categoryId])
+  @@index([assetId])
+  @@index([categoryId])
+}
+
+model Collection {
+  id           String   @id @default(uuid())
+  name         String
+  slug         String   @unique
+  description  String?
+  coverAssetId String?
+  isPublic     Boolean  @default(false)
+  userId       String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  collectionAssets CollectionAsset[]
+
+  @@index([userId])
+  @@index([slug])
+}
+
+model CollectionAsset {
+  id           String   @id @default(uuid())
+  collectionId String
+  assetId      String
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  asset      Asset3D    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, assetId])
+  @@index([collectionId])
+  @@index([assetId])
 }

@@ -15,8 +15,11 @@ export class MemoryStore {
   materialVariants = new Map<string, MaterialVariant>();
 
   createAsset(asset: Asset3D) {
-    this.assets.set(asset.id, asset);
-    return asset;
+    const assetWithId = asset.id
+      ? asset
+      : { ...asset, id: randomUUID() };
+    this.assets.set(assetWithId.id, assetWithId);
+    return assetWithId;
   }
 
   getAsset(id: string) {
