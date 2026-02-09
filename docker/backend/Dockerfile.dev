@@ -1,38 +1,13 @@
-# =============================================================================
-# Backend Dockerfile - Development mode with hot reload
-# =============================================================================
-
+# Simplexr Backend - Development Dockerfile
 FROM node:20-alpine
-
-# Install watchman and other dev tools
-RUN apk add --no-cache bash curl watchman
-
 WORKDIR /app
-
-# Copy package files
 COPY package*.json ./
-
-# Install all dependencies (including dev dependencies)
-RUN npm ci
-
-# Copy source code
-COPY prisma ./prisma/
-COPY src ./src/
-COPY tsconfig.json ./
-
-# Generate Prisma client
-RUN npx prisma generate
-
-# Environment configuration
+RUN npm install
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001 -G nodejs && chown -R nodejs:nodejs /app
+COPY --chown=nodejs:nodejs src ./src/
+COPY --chown=nodejs:nodejs prisma ./prisma/
+USER nodejs
 ENV NODE_ENV=development
-ENV HOST=0.0.0.0
 ENV PORT=3000
-
-# Expose port
 EXPOSE 3000
-
-# Install tsx globally for hot reload
-RUN npm install -g tsx
-
-# Start with tsx for hot reload
-CMD ["tsx", "watch", "src/server.ts"]
+CMD ["npx", "tsx", "watch", "--no-cache", "src/server.ts"]

@@ -1,23 +1,11 @@
 version: '3.9'
-
-# =============================================================================
-# Development Override - Docker Compose
-# =============================================================================
-# This file provides development-specific overrides for docker-compose.yml
-# Use this with: docker-compose -f docker/docker-compose.yml -f docker/docker-compose.override.yml up -d
-# =============================================================================
-
 services:
-  # -------------------------------------------------------------------------
-  # Backend - Development with hot reload
-  # -------------------------------------------------------------------------
   backend:
     build:
       context: .
       dockerfile: docker/backend/Dockerfile.dev
     container_name: simplexr-backend-dev
     volumes:
-      # Mount source code for hot reload
       - ../src:/app/src
       - ../prisma:/app/prisma
       - ../package.json:/app/package.json
@@ -27,56 +15,35 @@ services:
       - USE_REAL_SERVICES=true
     ports:
       - "3001:3000"
-    # Don't restart on changes in development - we want manual restart
-    # to pick up new code
     restart: "no"
-
-  # -------------------------------------------------------------------------
-  # Admin - Development with Vite HMR
-  # -------------------------------------------------------------------------
   admin:
     build:
       context: .
       dockerfile: docker/admin/Dockerfile.dev
     container_name: simplexr-admin-dev
     volumes:
-      # Mount source code for hot reload
       - ../admin/src:/app/admin/src
       - ../admin/package.json:/app/admin/package.json
       - ../admin/vite.config.ts:/app/admin/vite.config.ts
     ports:
-      - "5173:5173"
+      - "5174:5173"
     environment:
       - VITE_API_URL=http://localhost:3000
     restart: "no"
-
-  # -------------------------------------------------------------------------
-  # PostgreSQL - Development settings
-  # -------------------------------------------------------------------------
   postgres:
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - postgres_init:/docker-entrypoint-initdb.d
-
-  # -------------------------------------------------------------------------
-  # Redis - Development settings
-  # -------------------------------------------------------------------------
   redis:
     ports:
       - "6379:6379"
-
-  # -------------------------------------------------------------------------
-  # MinIO - Development settings
-  # -------------------------------------------------------------------------
   minio:
     ports:
       - "9000:9000"
       - "9001:9001"
     volumes:
       - minio_data:/data
-
 volumes:
   postgres_data:
   minio_data:
