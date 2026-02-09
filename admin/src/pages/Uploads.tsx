@@ -1,12 +1,20 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UploadCloud, File, X, Check, AlertCircle, Loader2 } from 'lucide-react';
-import { uploadsApi, assetsApi } from '@/lib/api.js';
-import { Button } from '@/components/ui/Button.js';
-import { Input } from '@/components/ui/Input.js';
-import { Card, CardContent } from '@/components/ui/Card.js';
-import { useToast } from '@/components/ui/Toast.js';
-import { cn } from '@/lib/utils.js';
+import {
+  UploadCloud,
+  File,
+  X,
+  CheckCircle,
+  AlertCircle,
+  Loader2,
+  Sparkles,
+  FolderOpen,
+} from 'lucide-react';
+import { uploadsApi, assetsApi } from '@/lib/api';
+import { Button } from '@/components/ui/Button';
+import { Card, CardContent, CardHeader } from '@/components/ui/Card';
+import { useToast } from '@/components/ui/Toast';
+import { cn } from '@/lib/utils';
 
 type UploadStatus = 'idle' | 'uploading' | 'success' | 'error';
 
@@ -16,16 +24,24 @@ interface UploadFile {
   status: UploadStatus;
   progress: number;
   error?: string;
-  assetUrl?: string;
   assetId?: string;
 }
+
+const ALLOWED_EXTENSIONS = ['.glb', '.gltf'];
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
 export function Uploads() {
   const navigate = useNavigate();
   const toast = useToast();
   const [uploads, setUploads] = useState<UploadFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [assetName, setAssetName] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -37,34 +53,62 @@ export function Uploads() {
     setIsDragging(false);
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
+  const validateFiles = (files: File[]): { valid: File[]; invalid: { file: File; reason: string }[] } => {
+    const valid: File[] = [];
+    const invalid: { file: File; reason: string }[] = [];
 
-    const files = Array.from(e.dataTransfer.files).filter(
-      (file) => file.name.toLowerCase().endsWith('.glb')
-    );
+    files.forEach((file) => {
+      const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+      if (!ALLOWED_EXTENSIONS.includes(ext)) {
+        invalid.push({ file, reason: 'Extensão não permitida' });
+        return;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        invalid.push({ file, reason: 'Arquivo muito grande (max 100MB)' });
+        return;
+      }
+      valid.push(file);
+    });
 
-    if (files.length === 0) {
-      toast.addToast('Please drop .glb files only', 'error');
-      return;
-    }
+    return { valid, invalid };
+  };
 
-    addFiles(files);
-  }, [toast]);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+
+      const files = Array.from(e.dataTransfer.files);
+      const { valid, invalid } = validateFiles(files);
+
+      if (invalid.length > 0) {
+        invalid.forEach(({ file, reason }) => {
+          toast.addToast(`${file.name}: ${reason}`, 'error');
+        });
+      }
+
+      if (valid.length > 0) {
+        addFiles(valid);
+      }
+    },
+    [toast]
+  );
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    const glbFiles = files.filter((file) =>
-      file.name.toLowerCase().endsWith('.glb')
-    );
+    const { valid, invalid } = validateFiles(files);
 
-    if (glbFiles.length === 0) {
-      toast.addToast('Please select .glb files only', 'error');
-      return;
+    if (invalid.length > 0) {
+      invalid.forEach(({ file, reason }) => {
+        toast.addToast(`${file.name}: ${reason}`, 'error');
+      });
     }
 
-    addFiles(glbFiles);
+    if (valid.length > 0) {
+      addFiles(valid);
+    }
+
+    e.target.value = '';
   };
 
   const addFiles = (files: File[]) => {
@@ -82,10 +126,10 @@ export function Uploads() {
     setUploads((prev) => prev.filter((u) => u.id !== id));
   };
 
-  const uploadFile = async (upload: UploadFile) => {
+  const uploadFile = async (upload: UploadFile): Promise<string> => {
     setUploads((prev) =>
       prev.map((u) =>
-        u.id === upload.id ? { ...u, status: 'uploading' as UploadStatus } : u
+        u.id === upload.id ? { ...u, status: 'uploading' as UploadStatus, progress: 10 } : u
       )
     );
 
@@ -93,6 +137,10 @@ export function Uploads() {
       // Get presigned URL
       const fileName = `${Date.now()}-${upload.file.name}`;
       const { uploadUrl, fileUrl } = await uploadsApi.presign(fileName);
+
+      setUploads((prev) =>
+        prev.map((u) => (u.id === upload.id ? { ...u, progress: 30 } : u))
+      );
 
       // Upload to storage
       await fetch(uploadUrl, {
@@ -104,28 +152,23 @@ export function Uploads() {
       });
 
       setUploads((prev) =>
-        prev.map((u) =>
-          u.id === upload.id ? { ...u, progress: 100, assetUrl: fileUrl } : u
-        )
+        prev.map((u) => (u.id === upload.id ? { ...u, progress: 70 } : u))
       );
 
       // Create asset
-      const assetNameValue = assetName || upload.file.name.replace('.glb', '');
+      const assetName = upload.file.name.replace(/\.(glb|gltf)$/i, '');
       const asset = await assetsApi.create({
-        name: assetNameValue,
+        name: assetName,
         masterUrl: fileUrl,
       });
 
       setUploads((prev) =>
         prev.map((u) =>
-          u.id === upload.id
-            ? { ...u, status: 'success' as UploadStatus, assetId: asset.id }
-            : u
+          u.id === upload.id ? { ...u, status: 'success' as UploadStatus, progress: 100, assetId: asset.id } : u
         )
       );
 
-      toast.addToast(`Successfully uploaded ${upload.file.name}`, 'success');
-      setAssetName('');
+      return asset.id;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Upload failed';
       setUploads((prev) =>
@@ -133,162 +176,210 @@ export function Uploads() {
           u.id === upload.id ? { ...u, status: 'error' as UploadStatus, error: message } : u
         )
       );
-      toast.addToast(`Failed to upload ${upload.file.name}`, 'error');
+      throw error;
     }
   };
 
-  const uploadAll = () => {
-    uploads.forEach((upload) => {
-      if (upload.status === 'idle') {
-        uploadFile(upload);
+  const uploadAll = async () => {
+    const pending = uploads.filter((u) => u.status === 'idle');
+    if (pending.length === 0) return;
+
+    setIsUploading(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const upload of pending) {
+      try {
+        await uploadFile(upload);
+        successCount++;
+      } catch {
+        errorCount++;
       }
-    });
+    }
+
+    setIsUploading(false);
+
+    if (successCount > 0) {
+      toast.addToast(`${successCount} arquivo(s) enviado(s) com sucesso`, 'success');
+    }
+    if (errorCount > 0) {
+      toast.addToast(`${errorCount} arquivo(s) falharam`, 'error');
+    }
   };
 
   const clearCompleted = () => {
-    setUploads((prev) => prev.filter((u) => u.status === 'idle' || u.status === 'uploading'));
+    setUploads((prev) => prev.filter((u) => u.status !== 'success'));
   };
 
   const pendingCount = uploads.filter((u) => u.status === 'idle').length;
   const completedCount = uploads.filter((u) => u.status === 'success').length;
-  const errorCount = uploads.filter((u) => u.status === 'error').length;
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-4xl mx-auto space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Upload 3D Models</h1>
-        <p className="text-gray-500 mt-1">
-          Upload GLB files to create new 3D assets in your library.
+      <div className="text-center">
+        <div className="w-16 h-16 mx-auto bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
+          <Sparkles className="w-8 h-8 text-primary" />
+        </div>
+        <h1 className="text-3xl font-bold text-gray-900">Upload de Modelos 3D</h1>
+        <p className="text-gray-500 mt-2">
+          Arraste e solte seus arquivos GLB ou GLTF para adicionar à sua biblioteca
         </p>
       </div>
 
       {/* Upload Zone */}
       <Card>
-        <CardContent className="p-6">
+        <CardContent className="p-8">
           <div
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             className={cn(
-              'border-2 border-dashed rounded-xl p-12 text-center transition-colors',
+              'relative border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-300',
               isDragging
-                ? 'border-primary bg-primary/5'
+                ? 'border-primary bg-primary/5 scale-[1.02]'
                 : 'border-gray-300 hover:border-gray-400'
             )}
           >
-            <UploadCloud className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Drag & drop GLB files here
-            </h3>
-            <p className="text-gray-500 mb-4">or click to browse your files</p>
-            <label>
-              <input
-                type="file"
-                accept=".glb"
-                multiple
-                onChange={handleFileInput}
-                className="hidden"
-              />
-              <span className="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors bg-primary text-white hover:bg-primary-dark cursor-pointer">
-                Select Files
-              </span>
-            </label>
-          </div>
+            <input
+              type="file"
+              accept=".glb,.gltf"
+              multiple
+              onChange={handleFileInput}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            />
 
-          {/* Asset Name Input */}
-          {uploads.length > 0 && (
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Asset Name (optional)
-              </label>
-              <Input
-                placeholder="Leave empty to use filename"
-                value={assetName}
-                onChange={(e) => setAssetName(e.target.value)}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                This name will be used for all uploads in this batch
-              </p>
+            <div className="space-y-4">
+              <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center">
+                <UploadCloud className="w-8 h-8 text-gray-400" />
+              </div>
+              <div>
+                <p className="text-lg font-medium text-gray-900">
+                  Arraste seus arquivos aqui
+                </p>
+                <p className="text-sm text-gray-500 mt-1">
+                  ou clique para navegar em seus arquivos
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-4 text-xs text-gray-400">
+                <span>GLB • GLTF</span>
+                <span>•</span>
+                <span>até 100MB</span>
+              </div>
             </div>
-          )}
+          </div>
         </CardContent>
       </Card>
 
-      {/* Uploads Queue */}
+      {/* Upload Queue */}
       {uploads.length > 0 && (
         <Card>
-          <div className="flex flex-row items-center justify-between p-6 border-b border-gray-100">
-            <h3 className="text-lg font-semibold text-gray-900">Upload Queue ({uploads.length})</h3>
-            <div className="flex items-center gap-2">
-              {completedCount > 0 && (
-                <Button variant="secondary" size="sm" onClick={clearCompleted}>
-                  Clear Completed
-                </Button>
-              )}
-              {pendingCount > 0 && (
-                <Button onClick={uploadAll}>
-                  <UploadCloud className="w-4 h-4" />
-                  Upload {pendingCount} File{pendingCount > 1 ? 's' : ''}
-                </Button>
-              )}
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Arquivos na Fila</h2>
+                <p className="text-sm text-gray-500">
+                  {uploads.length} arquivo(s) • {pendingCount} pendente(s)
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {completedCount > 0 && (
+                  <Button variant="secondary" size="sm" onClick={clearCompleted}>
+                    Limpar concluídos
+                  </Button>
+                )}
+                {pendingCount > 0 && (
+                  <Button onClick={uploadAll} disabled={isUploading}>
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <UploadCloud className="w-4 h-4" />
+                        Enviar {pendingCount} arquivo(s)
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
-          <CardContent className="p-0">
-            <div className="divide-y divide-gray-100">
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="space-y-3">
               {uploads.map((upload) => (
-                <div key={upload.id} className="p-4 flex items-center gap-4">
-                  <File className="w-8 h-8 text-gray-400" />
+                <div
+                  key={upload.id}
+                  className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl"
+                >
+                  <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm">
+                    <File className="w-5 h-5 text-gray-400" />
+                  </div>
+
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
+                    <p className="font-medium text-gray-900 truncate">
                       {upload.file.name}
                     </p>
-                    <p className="text-xs text-gray-500">
-                      {(upload.file.size / 1024 / 1024).toFixed(2)} MB
+                    <p className="text-sm text-gray-500">
+                      {formatFileSize(upload.file.size)}
                     </p>
+
                     {upload.status === 'uploading' && (
-                      <div className="mt-2 w-full bg-gray-200 rounded-full h-1.5">
-                        <div
-                          className="bg-primary h-1.5 rounded-full transition-all"
-                          style={{ width: `${upload.progress}%` }}
-                        />
+                      <div className="mt-2">
+                        <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-primary rounded-full transition-all duration-300"
+                            style={{ width: `${upload.progress}%` }}
+                          />
+                        </div>
                       </div>
                     )}
                   </div>
+
                   <div className="flex items-center gap-2">
                     {upload.status === 'idle' && (
-                      <Button size="sm" onClick={() => uploadFile(upload)}>
-                        Upload
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => removeUpload(upload.id)}
+                      >
+                        <X className="w-4 h-4" />
                       </Button>
                     )}
+
                     {upload.status === 'uploading' && (
                       <Loader2 className="w-5 h-5 text-primary animate-spin" />
                     )}
+
                     {upload.status === 'success' && (
-                      <>
-                        <Check className="w-5 h-5 text-green-500" />
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-5 h-5 text-green-500" />
                         {upload.assetId && (
-                          <button
+                          <Button
+                            size="sm"
+                            variant="ghost"
                             onClick={() => navigate(`/assets/${upload.assetId}`)}
-                            className="text-sm text-primary hover:text-primary-dark"
                           >
-                            View
-                          </button>
+                            Ver asset
+                          </Button>
                         )}
-                      </>
-                    )}
-                    {upload.status === 'error' && (
-                      <div className="flex items-center gap-2 text-red-500">
-                        <AlertCircle className="w-5 h-5" />
-                        <span className="text-xs">{upload.error}</span>
                       </div>
                     )}
-                    <button
-                      onClick={() => removeUpload(upload.id)}
-                      className="p-1 text-gray-400 hover:text-gray-600"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+
+                    {upload.status === 'error' && (
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="w-5 h-5 text-red-500" />
+                        <span className="text-sm text-red-600">{upload.error}</span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => removeUpload(upload.id)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -297,27 +388,20 @@ export function Uploads() {
         </Card>
       )}
 
-      {/* Stats */}
-      {(completedCount > 0 || errorCount > 0) && (
+      {/* Stats / Help */}
+      {uploads.length === 0 && (
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-6">
-              {completedCount > 0 && (
-                <div className="flex items-center gap-2 text-green-600">
-                  <Check className="w-5 h-5" />
-                  <span className="text-sm font-medium">
-                    {completedCount} uploaded successfully
-                  </span>
-                </div>
-              )}
-              {errorCount > 0 && (
-                <div className="flex items-center gap-2 text-red-600">
-                  <AlertCircle className="w-5 h-5" />
-                  <span className="text-sm font-medium">
-                    {errorCount} failed
-                  </span>
-                </div>
-              )}
+          <CardContent className="p-8">
+            <div className="text-center">
+              <FolderOpen className="w-12 h-12 mx-auto text-gray-300 mb-4" />
+              <h3 className="font-medium text-gray-900 mb-2">
+                Nenhum arquivo selecionado
+              </h3>
+              <p className="text-sm text-gray-500 max-w-md mx-auto">
+                Selecione arquivos GLB ou GLTF do seu computador para fazer upload.
+                Os arquivos serão processados e estarão disponíveis na sua biblioteca
+                após o upload.
+              </p>
             </div>
           </CardContent>
         </Card>

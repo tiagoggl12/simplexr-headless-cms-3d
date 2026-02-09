@@ -1,6 +1,12 @@
 // Types matching the backend models
 export type AssetStatus = 'draft' | 'processing' | 'ready' | 'failed';
 
+export interface AssetThumbnail {
+  url: string;
+  width: number;
+  height: number;
+}
+
 export interface Asset3D {
   id: string;
   name: string;
@@ -8,6 +14,12 @@ export interface Asset3D {
   status: AssetStatus;
   createdAt: string;
   updatedAt: string;
+  // Optional enriched fields
+  thumbnails?: Record<string, AssetThumbnail>;
+  thumbnailUrl?: string;
+  fileSize?: number;
+  tags?: string[];
+  description?: string;
 }
 
 export interface LightingPreset {

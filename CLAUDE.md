@@ -22,64 +22,118 @@ docker compose -f docker/docker-compose.yml up    # PostgreSQL, Redis, MinIO
 
 ## Architecture
 
-This is a headless DAM (Digital Asset Management) for 3D assets, focused on e-commerce delivery. GLB files are the master format; USDZ and thumbnails are derived artifacts.
+This is a headless DAM (Digital Asset Management) for 3D assets focused on e-commerce delivery. GLB files are the master format; USDZ and thumbnails are derived artifacts.
 
-### Core Concepts
+### Core Stack
 
-**GLB Master Pipeline**: All 3D assets use GLB as the source of truth. The processing pipeline (Blender + glTF-Transform) generates:
+- **Runtime**: Node.js (ES2022 modules)
+- **Web Framework**: Fastify (v4.26.2)
+- **Language**: TypeScript (v5.5.4) with strict type checking
+- **Database**: PostgreSQL via Prisma ORM (MemoryStore for development)
+- **Queue System**: BullMQ with Redis for background jobs
+- **Storage**: AWS S3 SDK with MinIO for local development
+- **3D Processing**: glTF-Transform for GLB manipulation, Draco compression, KTX2 textures
+
+### Key Features
+
+**GLB Master Pipeline**: All 3D assets use GLB as the source of truth. The processing pipeline generates:
 - USDZ for iOS AR Quick Look
 - Thumbnail renders per lighting preset
-- Optimized viewer assets
+- Optimized viewer assets with Draco/KTX2 compression
 
-**Render Manifests**: The `/viewer/assets/:assetId/render` endpoint returns a RenderManifest that resolves the complete viewer configuration (asset, lighting, camera, quality profile) in a single request.
+**Advanced Capabilities**:
+- **Material Variants**: PBR-based material customization
+- **Level of Detail (LOD)**: Automatic LOD generation for performance
+- **Custom Fields**: Flexible metadata system with JSON schemas
+- **Workflow System**: Asset lifecycle management with events
+- **Analytics**: Asset views, downloads, sharing metrics
+- **Export System**: Multi-format export capabilities
 
 ### Data Model
 
-Core entities in `src/models.ts`:
-- `Asset3D`: master GLB URL, status (draft/processing/ready/failed), timestamps
-- `LightingPreset`: HDRI URL with exposure/intensity, tags for filtering
-- `RenderPreset`: combines asset + lighting preset + camera configuration
-- `RenderManifest`: resolved config for viewer consumption (versioned schema)
+Core entities in `src/models/`:
+- `Asset3D`: master GLB URL, status, timestamps, variants
+- `LightingPreset`: HDRI URL with exposure/intensity, tags
+- `MaterialVariant`: PBR material configurations with textures
+- `RenderPreset`: combines asset + lighting preset + camera
+- `CustomField`: JSON schema for dynamic metadata
+- `WorkflowEvent`: Asset lifecycle events
+- `ExportJob`: Background export processing
 
-### Service Layer
+### Service Architecture (23 services)
 
-`src/services/storage.ts` - `LocalStorageService`: Stubbed presigned URL generation. In production this integrates with S3/MinIO.
+**Core Services**:
+- `StorageService`: Abstract storage interface (S3/MinIO)
+- `CDNService`: Content delivery network integration
+- `RenderManifestService`: Dynamic viewer configuration
 
-`src/services/queue.ts` - `InMemoryQueue`: Stubbed job queue for async processing (normalize, optimize, convert, thumbnail).
+**3D Processing**:
+- `DracoCompressionService`: Mesh optimization
+- `KTX2ProcessorService`: Texture compression
+- `LODGeneratorService`: Level of detail generation
+- `USDZConverterService`: iOS AR format conversion
 
-`src/store.ts` - `MemoryStore`: In-memory persistence. V0 uses maps; planned replacement with PostgreSQL.
+**Business Logic**:
+- `AssetVersioningService`: Asset version management
+- `BatchOperationsService`: Bulk processing
+- `WebhookService`: External integrations
+- `AnalyticsService`: Metrics and tracking
 
-### API Endpoints
+### API Design
 
-Asset Management:
+Versioned API endpoints (V0-V5) with comprehensive CRUD operations:
+
+**Asset Management**:
 - `POST /assets` - Create Asset3D
 - `GET /assets/:id` - Get asset details
+- `PATCH /assets/:id` - Update asset
+- `DELETE /assets/:id` - Delete asset
 
-Upload:
-- `POST /uploads/presign` - Get presigned URL for upload
+**Upload System**:
+- `POST /uploads/presign` - Get presigned URL
+- `POST /uploads/complete` - Mark upload complete
 
-Viewer Delivery:
-- `GET /viewer/assets/:assetId` - Asset info for viewer
-- `GET /viewer/assets/:assetId/render?preset=:presetId&device=mobile` - Render manifest
-- `GET /viewer/presets?tag=studio` - List lighting presets
+**Viewer Delivery**:
+- `GET /viewer/assets/:assetId` - Asset info
+- `GET /viewer/assets/:assetId/render` - Render manifest
+- `GET /viewer/presets` - List lighting presets
+- `GET /viewer/materials` - List material variants
 
-Configuration:
-- `POST /presets/lighting` - Create lighting preset
-- `POST /presets/render` - Create render preset (asset + lighting + camera)
+**Advanced Features**:
+- `POST /analytics/events` - Track usage
+- `POST /webhooks` - Event subscriptions
+- `POST /exports` - Create export jobs
+- `POST /custom-fields` - Define metadata schemas
 
 ### Module System
 
-Uses ES2022 modules with `.js` extensions in import statements (TypeScript emits to this format). All imports must include `/` suffix for directory imports: `import { foo } from './bar.js'`.
+ES2022 modules with explicit `/` suffix imports:
+```typescript
+import { Asset3D } from './models/asset.js'
+import { StorageService } from './services/storage.js'
+```
+
+### Testing
+
+Vitest-based test suite covering:
+- Asset CRUD operations
+- 3D processing features
+- Authentication and authorization
+- Analytics and metrics
+- Custom field functionality
+- Workflow and events
 
 ### Environment Variables
 
 - `PORT` - Server port (default: 3000)
 - `HOST` - Bind address (default: 0.0.0.0)
-- `STORAGE_BASE_URL` - Storage base URL for presigned URLs (default: s3://bucket)
+- `STORAGE_BASE_URL` - Storage base URL
+- `DATABASE_URL` - PostgreSQL connection string
+- `REDIS_URL` - Redis connection string
 
-## V0 Scope Notes
+### Scripts for Development
 
-- Storage and queue are stubbed (no actual S3/Redis integration)
-- No test coverage yet (tests directory pending)
-- No material variant support yet (planned V1)
-- Processing pipeline is recorded but not executed
+Utility scripts in `scripts/`:
+- `generate-lods.ts` - Generate Level of Detail for models
+- `poltrona-v3-complete.ts` - Complete processing workflow
+- `process-poltrona.ts` - Asset processing pipeline
