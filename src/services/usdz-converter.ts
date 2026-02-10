@@ -194,7 +194,7 @@ except Exception as e:
       const { stdout, stderr } = await execAsync(command);
 
       // Clean up script
-      await unlink(scriptPath).catch(() => {});
+      await unlink(scriptPath).catch(() => { });
 
       if (stdout.includes('SUCCESS:')) {
         const fs = await import('node:fs/promises');
@@ -278,7 +278,7 @@ except Exception as e:
       });
 
       // Clean up script
-      await unlink(scriptPath).catch(() => {});
+      await unlink(scriptPath).catch(() => { });
 
       if (stdout.includes('SUCCESS:') || stderr.includes('SUCCESS:')) {
         const fs = await import('node:fs/promises');
@@ -367,7 +367,7 @@ except Exception as e:
       await this.io.readBinary(new Uint8Array(glbBuffer));
       console.log(`[USDZ] GLB validated: ${originalSize} bytes`);
 
-      let result: { success: boolean; usdzPath: string; size: number; message: string };
+      let result: { success: boolean; usdzPath: string; size: number; message: string } = { success: false, usdzPath: '', size: 0, message: 'No conversion method available' };
 
       // Try each conversion method
       if (this.config.method === 'usdzo') {
@@ -390,7 +390,7 @@ except Exception as e:
       }
 
       // Clean up temp GLB
-      await unlink(tempGlbPath).catch(() => {});
+      await unlink(tempGlbPath).catch(() => { });
 
       if (result.success && result.size > 0) {
         const usdzUrl = glbUrl.replace('.glb', '.usdz');
@@ -522,19 +522,19 @@ def Scope "Looks"
     try {
       await execAsync('which usdzo');
       results.usdzo = true;
-    } catch {}
+    } catch { }
 
     // Check Python
     try {
       await execAsync('which python3');
       results.python = true;
-    } catch {}
+    } catch { }
 
     // Check Blender
     try {
       await execAsync(`test -f "${this.config.blenderPath}"`);
       results.blender = true;
-    } catch {}
+    } catch { }
 
     return results;
   }

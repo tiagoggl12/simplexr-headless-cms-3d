@@ -1,5 +1,5 @@
 import { NodeIO, Texture, ImageUtils } from '@gltf-transform/core';
-import { resize, textureCompress } from '@gltf-transform/functions';
+import { textureCompress } from '@gltf-transform/functions';
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import { mkdir, writeFile, unlink, readFile } from 'node:fs/promises';
@@ -201,7 +201,7 @@ export class KTX2Processor {
 
       // Add max resolution
       if (texture.width > this.DEFAULT_OPTIONS.maxResolution! ||
-          texture.height > this.DEFAULT_OPTIONS.maxResolution!) {
+        texture.height > this.DEFAULT_OPTIONS.maxResolution!) {
         args.push('--width_limit', this.DEFAULT_OPTIONS.maxResolution!.toString());
         args.push('--height_limit', this.DEFAULT_OPTIONS.maxResolution!.toString());
       }
@@ -215,7 +215,7 @@ export class KTX2Processor {
       const compressedBuffer = await readFile(tempOutputPath);
 
       // Clean up input
-      await unlink(tempInputPath).catch(() => {});
+      await unlink(tempInputPath).catch(() => { });
 
       return {
         buffer: compressedBuffer,
@@ -223,7 +223,7 @@ export class KTX2Processor {
       };
     } catch (error: any) {
       // Clean up on failure
-      await unlink(tempInputPath).catch(() => {});
+      await unlink(tempInputPath).catch(() => { });
       throw new Error(`toktx compression failed: ${error.message}`);
     }
   }
@@ -302,7 +302,7 @@ export class KTX2Processor {
             compressedBuffer = result.buffer;
 
             // Clean up temp file
-            await unlink(tempOutputPath).catch(() => {});
+            await unlink(tempOutputPath).catch(() => { });
           } else {
             // JS fallback: For now, return a placeholder with simulated compression
             // In a real implementation, you would use @gltf-transform/extensions
@@ -411,7 +411,7 @@ export class KTX2Processor {
       if (useCLI) {
         const result = await this.compressTextureWithToktx(fakeTexture, tempOutputPath, opts.quality);
         compressedSize = result.size;
-        await unlink(tempOutputPath).catch(() => {});
+        await unlink(tempOutputPath).catch(() => { });
       } else {
         // JS fallback - simulated compression
         compressedSize = Math.floor(originalSize * 0.3); // Simulate 70% reduction

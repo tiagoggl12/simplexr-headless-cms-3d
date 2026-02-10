@@ -23,6 +23,7 @@ async function loadDracoModule(): Promise<boolean> {
   }
 
   try {
+    // @ts-ignore - draco3dgltf has no type declarations
     const dracoModule = await import('draco3dgltf');
     DracoEncoder = dracoModule.Encoder;
     DracoDecoder = dracoModule.Decoder;
@@ -206,8 +207,8 @@ export class DracoCompressor {
     const encodeTime = Date.now() - startTime;
 
     // Clean up input file
-    await unlink(inputPath).catch(() => {});
-    await unlink(outputPath).catch(() => {});
+    await unlink(inputPath).catch(() => { });
+    await unlink(outputPath).catch(() => { });
 
     return { buffer, encodeTime };
   }
@@ -272,7 +273,7 @@ export class DracoCompressor {
 
       if (opts.applyWeld) {
         // Weld with tolerance to merge nearby vertices
-        transforms.push(weld({ tolerance: 0.0001 }));
+        transforms.push(weld({ tolerance: 0.0001 } as any));
         console.log('[Draco] Applied weld transform');
       }
 

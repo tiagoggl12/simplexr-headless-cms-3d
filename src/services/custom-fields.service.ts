@@ -69,8 +69,8 @@ class CustomFieldsStore {
 
     // Ensure fields have IDs and slugs
     const fields: CustomField[] = data.fields.map((field, index) => ({
-      id: `field_${randomBytes(16).toString('hex')}`,
       ...field,
+      id: `field_${randomBytes(16).toString('hex')}`,
       slug: field.slug || createSlug(field.name),
       order: field.order ?? index,
     }));
@@ -110,7 +110,7 @@ class CustomFieldsStore {
     const updated: AssetTypeData = {
       ...assetType,
       name: updates.name ?? assetType.name,
-      slug: updates.slug ?? assetType.slug,
+      slug: (updates as any).slug ?? assetType.slug,
       description: updates.description ?? assetType.description,
       icon: updates.icon ?? assetType.icon,
       fields,
@@ -402,7 +402,7 @@ export class CustomFieldsService {
       slug,
       description: data.description,
       icon: data.icon,
-      fields: data.fields,
+      fields: data.fields as CustomField[],
       isActive: true,
     });
 

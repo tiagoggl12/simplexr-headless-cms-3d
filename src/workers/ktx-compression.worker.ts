@@ -113,7 +113,7 @@ export class KTX2CompressionWorker {
   getStatus() {
     return {
       running: this.worker.isRunning(),
-      jobCounts: this.worker.getName(),
+      jobCounts: this.worker.name,
     };
   }
 }

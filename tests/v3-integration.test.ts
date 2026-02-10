@@ -200,7 +200,7 @@ describe('V3 Integration Tests', () => {
         });
 
         expect(manifest.manifest.asset.capabilities?.lods).toBe(true);
-        expect(manifest.manifest.asset.capabilities?.maxLod).toBe(2);
+        expect(manifest.manifest.asset.capabilities?.maxLodLevel).toBe(2);
       });
     });
 
@@ -224,7 +224,7 @@ describe('V3 Integration Tests', () => {
 
         expect(manifest.manifest.asset.capabilities?.ktx2).toBe(true);
         expect(manifest.manifest.asset.capabilities?.lods).toBe(true);
-        expect(manifest.manifest.asset.capabilities?.maxLod).toBe(2);
+        expect(manifest.manifest.asset.capabilities?.maxLodLevel).toBe(2);
       });
     });
 

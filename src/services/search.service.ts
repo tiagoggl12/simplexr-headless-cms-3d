@@ -159,7 +159,7 @@ export class SearchService {
     `;
 
     // For in-memory store (fallback)
-    const allAssets = Array.from(this.store.getAssets());
+    const allAssets: Asset3D[] = Array.from(this.store.getAssets());
     let filteredAssets = allAssets;
 
     // Apply filters
@@ -443,7 +443,7 @@ export class SearchService {
     const queryLower = query.toLowerCase();
     const suggestions: SearchSuggestion[] = [];
 
-    const allAssets = Array.from(this.store.getAssets());
+    const allAssets: Asset3D[] = Array.from(this.store.getAssets());
 
     // Asset name suggestions
     for (const asset of allAssets) {
@@ -473,8 +473,8 @@ export class SearchService {
       return [];
     }
 
-    const allAssets = Array.from(this.store.getAssets())
-      .filter(a => a.id !== assetId);
+    const allAssets: Asset3D[] = Array.from(this.store.getAssets())
+      .filter((a: Asset3D) => a.id !== assetId);
 
     const similarities = allAssets.map(a => ({
       asset: a,
@@ -496,9 +496,9 @@ export class SearchService {
     if (asset1.status === asset2.status) score += 10;
 
     // Name similarity
-    const words1 = asset.name.toLowerCase().split(/\s+/);
+    const words1 = asset1.name.toLowerCase().split(/\s+/);
     const words2 = asset2.name.toLowerCase().split(/\s+/);
-    const commonWords = words1.filter(w => words2.includes(w));
+    const commonWords = words1.filter((w: string) => words2.includes(w));
     score += commonWords.length * 5;
 
     // Tag overlap
@@ -521,7 +521,7 @@ export class SearchService {
     minDepth?: number;
     maxDepth?: number;
   }): Promise<Asset3D[]> {
-    const allAssets = Array.from(this.store.getAssets());
+    const allAssets: Asset3D[] = Array.from(this.store.getAssets());
 
     return allAssets.filter(asset => {
       const bbox = (asset as any).boundingBox;
@@ -542,7 +542,7 @@ export class SearchService {
    * Recent assets
    */
   async getRecent(limit: number = 10): Promise<Asset3D[]> {
-    const allAssets = Array.from(this.store.getAssets());
+    const allAssets: Asset3D[] = Array.from(this.store.getAssets());
 
     return allAssets
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -553,7 +553,7 @@ export class SearchService {
    * Popular assets (by views/usage)
    */
   async getPopular(limit: number = 10): Promise<Asset3D[]> {
-    const allAssets = Array.from(this.store.getAssets());
+    const allAssets: Asset3D[] = Array.from(this.store.getAssets());
 
     // Sort by view count if available
     return allAssets

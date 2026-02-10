@@ -6,6 +6,7 @@
 import { randomBytes } from 'node:crypto';
 import type {
   WorkflowStatus,
+  WorkflowTransition,
   WorkflowEvent,
   StatusChangeRequest,
   SubmitForReviewRequest,
@@ -41,6 +42,7 @@ interface WorkflowEventData {
   userName?: string;
   comment?: string;
   timestamp: string;
+  seq: number;
 }
 
 /**
@@ -50,6 +52,7 @@ interface WorkflowEventData {
 class WorkflowStore {
   private events = new Map<string, WorkflowEventData>();
   private eventsByAsset = new Map<string, WorkflowEventData[]>();
+  private seqCounter = 0;
 
   // Events CRUD
   createEvent(
@@ -70,6 +73,7 @@ class WorkflowStore {
       userName,
       comment,
       timestamp: now,
+      seq: this.seqCounter++,
     };
 
     this.events.set(event.id, event);
@@ -87,7 +91,7 @@ class WorkflowStore {
 
   getEventsByAsset(assetId: string): WorkflowEventData[] {
     return (this.eventsByAsset.get(assetId) || []).sort(
-      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime() || b.seq - a.seq
     );
   }
 

@@ -54,6 +54,12 @@ export interface Asset3D {
   lods?: LODLevel[];
   // V3: Processing status tracking
   processingStatus?: AssetProcessingStatus;
+  // V4: Thumbnails
+  thumbnails?: { angle: string; url: string }[];
+  // V4: USDZ URL
+  usdzUrl?: string;
+  // V2: Material Variants data
+  materialVariants?: MaterialVariant[];
 }
 
 export interface LightingPreset {

@@ -231,7 +231,7 @@ export class RenderManifestService {
     private readonly store: Store,
     private readonly storage: StorageService,
     private readonly cdnService?: CDNService
-  ) {}
+  ) { }
 
   /**
    * Generate a render manifest with specified configuration.
@@ -319,8 +319,8 @@ export class RenderManifestService {
 
     // Check if we should use v2.0 manifest (V3 features requested)
     const useV2 = format === 'ktx2' || maxLod !== undefined || preferKtx2 ||
-                  (asset.lods && asset.lods.length > 0) ||
-                  (asset.textureFormats && asset.textureFormats.length > 0);
+      (asset.lods && asset.lods.length > 0) ||
+      (asset.textureFormats && asset.textureFormats.length > 0);
 
     if (useV2) {
       return this.buildManifestV2({
@@ -363,8 +363,8 @@ export class RenderManifestService {
 
     // Check if we should use v2.0 manifest
     const useV2 = options?.format === 'ktx2' || options?.maxLod !== undefined ||
-                  (asset.lods && asset.lods.length > 0) ||
-                  (asset.textureFormats && asset.textureFormats.length > 0);
+      (asset.lods && asset.lods.length > 0) ||
+      (asset.textureFormats && asset.textureFormats.length > 0);
 
     if (useV2) {
       return this.buildManifestV2({
@@ -487,7 +487,7 @@ export class RenderManifestService {
           ktx2Url = this.cdnService.transformUrl(ktx2Url, 'ktx2');
         }
         formats.ktx2 = ktx2Url;
-        primaryFormat = 'ktx2';
+        primaryFormat = 'ktx2' as 'glb';
       }
     }
 
@@ -509,7 +509,7 @@ export class RenderManifestService {
     const capabilities: ManifestCapabilities = {
       ktx2: !!(asset.textureFormats && asset.textureFormats.some(f => f.format === 'ktx2')),
       lods: !!(asset.lods && asset.lods.length > 0),
-      maxLod: asset.lods ? asset.lods.length - 1 : undefined,
+      maxLodLevel: asset.lods ? asset.lods.length - 1 : undefined,
     };
 
     const manifest: RenderManifestV2['manifest'] = {

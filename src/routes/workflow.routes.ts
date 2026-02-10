@@ -6,7 +6,7 @@
 import { z } from 'zod';
 import type { FastifyInstance } from 'fastify';
 import { getWorkflowService } from '../services/workflow.service.js';
-import type { WorkflowStatus, UserRole } from '../models/workflow.js';
+import type { WorkflowStatus, RequiredRole } from '../models/workflow.js';
 
 // Validation schemas
 const statusChangeSchema = z.object({
@@ -33,7 +33,7 @@ const unpublishSchema = z.object({
  * Helper to get user role from request
  * In production, this would come from JWT/Auth middleware
  */
-function getUserRole(request: any): UserRole {
+function getUserRole(request: any): RequiredRole {
   const auth = request.headers['x-user-role'];
   if (auth === 'admin') return 'admin';
   if (auth === 'editor') return 'editor';

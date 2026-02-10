@@ -40,6 +40,7 @@ export class AuthError extends Error {
  * Authorization error
  */
 export class ForbiddenError extends Error {
+  statusCode: number;
   constructor(message: string) {
     super(message);
     this.name = 'ForbiddenError';
@@ -183,7 +184,7 @@ export async function authenticate(
  * Require specific role
  */
 export function requireRole(...allowedRoles: UserRole[]) {
-  return async function(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  return async function (request: FastifyRequest, reply: FastifyReply): Promise<void> {
     if (!request.user) {
       throw new AuthError('Authentication required', 401);
     }
@@ -198,7 +199,7 @@ export function requireRole(...allowedRoles: UserRole[]) {
  * Require specific permission
  */
 export function requirePermission(...permissions: PermissionScope[]) {
-  return async function(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  return async function (request: FastifyRequest, reply: FastifyReply): Promise<void> {
     if (!request.user) {
       throw new AuthError('Authentication required', 401);
     }
@@ -384,7 +385,7 @@ export async function registerAuthRoutes(
       return reply.status(401).send({ error: 'Current password is incorrect' });
     }
 
-    authService.updateUser(user.id, { password: newPassword });
+    authService.updateUser(user.id, { password: newPassword } as any);
     return reply.status(204).send();
   });
 

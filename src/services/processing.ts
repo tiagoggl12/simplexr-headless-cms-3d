@@ -158,8 +158,7 @@ export class ProcessingService {
       // Check file size
       if (size > this.config.maxFileSize) {
         errors.push(
-          `File too large: ${(size / 1024 / 1024).toFixed(2)}MB exceeds limit of ${
-            this.config.maxFileSize / 1024 / 1024
+          `File too large: ${(size / 1024 / 1024).toFixed(2)}MB exceeds limit of ${this.config.maxFileSize / 1024 / 1024
           }MB`
         );
       }
@@ -564,7 +563,7 @@ export class ProcessingService {
     this.store.updateAsset(assetId, { processingStatus });
 
     // Enqueue background job
-    await this.queue.generateLODs(assetId, glbUrl, options);
+    await this.queue.generateLODs(assetId, glbUrl, options as any);
     console.log(`[Processing] Enqueued LOD generation job for asset ${assetId}`);
   }
 

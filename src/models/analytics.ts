@@ -129,10 +129,10 @@ export interface PopularAssetsQuery {
  * Create view event request
  */
 export interface TrackViewRequest {
-  assetId: string;
   sessionId?: string;
   duration?: number;
   referrer?: string;
+  userAgent?: string;
   context?: {
     device?: 'desktop' | 'mobile' | 'tablet';
     browser?: string;
@@ -145,7 +145,6 @@ export interface TrackViewRequest {
  * Create download event request
  */
 export interface TrackDownloadRequest {
-  assetId: string;
   format?: string; // Downloaded format
   userId?: string;
 }
@@ -154,7 +153,6 @@ export interface TrackDownloadRequest {
  * Share event request
  */
 export interface TrackShareRequest {
-  assetId: string;
   platform: 'email' | 'twitter' | 'facebook' | 'link' | 'embed' | 'other';
   userId?: string;
 }

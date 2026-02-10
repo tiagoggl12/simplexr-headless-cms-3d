@@ -91,7 +91,7 @@ const DEFAULT_THUMBNAIL_OPTIONS: Required<Omit<ThumbnailOptions, 'angles'>> = {
   width: 512,
   height: 512,
   backgroundColor: '#f0f0f0',
-  lighting: LIGHTING_PRESETS.studio,
+  lighting: LIGHTING_PRESETS.studio as { intensity?: number; color?: string; hdri?: string },
   camera: {
     distance: 3,
     fov: 45,
@@ -99,6 +99,8 @@ const DEFAULT_THUMBNAIL_OPTIONS: Required<Omit<ThumbnailOptions, 'angles'>> = {
   quality: 85,
   format: 'jpeg',
   transparent: false,
+  timeout: 120000,
+  useBlender: false,
 };
 
 /**
@@ -130,7 +132,7 @@ export interface ThumbnailGeneratorConfig {
 const DEFAULT_CONFIG: ThumbnailGeneratorConfig = {
   tempDir: '/tmp/simplexr-thumbnails',
   puppeteer: {
-    headless: 'new',
+    headless: true as boolean,
     args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
   },
   blenderPath: '/Applications/Blender.app/Contents/MacOS/Blender',
@@ -285,20 +287,20 @@ export class ThumbnailGenerator {
         // Lighting
         const ambientLight = new THREE.AmbientLight(
             '${options.lighting.color}',
-            ${options.lighting.intensity * 0.5}
+            ${(options.lighting?.intensity ?? 1) * 0.5}
         );
         scene.add(ambientLight);
 
         const mainLight = new THREE.DirectionalLight(
             '${options.lighting.color}',
-            ${options.lighting.intensity}
+            ${options.lighting?.intensity ?? 1}
         );
         mainLight.position.set(5, 10, 7);
         scene.add(mainLight);
 
         const fillLight = new THREE.DirectionalLight(
             '${options.lighting.color}',
-            ${options.lighting.intensity * 0.3}
+            ${(options.lighting?.intensity ?? 1) * 0.3}
         );
         fillLight.position.set(-5, 0, -5);
         scene.add(fillLight);
@@ -381,7 +383,7 @@ export class ThumbnailGenerator {
 
       const cam = blenderCameras[angle];
       const bgColor = options.backgroundColor.replace('#', '').toLowerCase();
-      const lighting = options.lighting.intensity * 1000; // 0-1 scale to watts
+      const lighting = (options.lighting?.intensity ?? 1) * 1000; // 0-1 scale to watts
 
       // Blender Python script
       const blenderScript = `
@@ -501,7 +503,7 @@ except Exception as e:
       await execAsync(command, { timeout: 180000 }); // 3 minute timeout
 
       // Clean up script
-      await unlink(scriptPath).catch(() => {});
+      await unlink(scriptPath).catch(() => { });
 
       // Check if output file exists
       try {
@@ -644,7 +646,7 @@ except Exception as e:
       await page.waitForFunction('window.__thumbnailReady', { timeout });
 
       // Get image data
-      const imageData = await page.evaluate(() => window.__thumbnailData);
+      const imageData = await page.evaluate(() => (window as any).__thumbnailData);
 
       // Close browser
       await browser.close();

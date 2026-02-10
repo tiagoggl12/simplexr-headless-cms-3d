@@ -32,14 +32,14 @@ const createAssetTypeSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
   icon: z.string().optional(),
-  fields: z.array(customFieldSchema.omit({ id: true })),
+  fields: z.array(customFieldSchema),
 });
 
 const updateAssetTypeSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
   icon: z.string().optional(),
-  fields: z.array(customFieldSchema.partial()).optional(),
+  fields: z.array(customFieldSchema.partial()).optional() as any,
   isActive: z.boolean().optional(),
 });
 
@@ -88,7 +88,7 @@ export async function registerAssetTypesRoutes(
     const payload = createAssetTypeSchema.parse(request.body);
 
     try {
-      const assetType = service.createAssetType(payload);
+      const assetType = service.createAssetType(payload as any);
       return reply.status(201).send(assetType);
     } catch (error) {
       const err = error as Error;
@@ -102,7 +102,7 @@ export async function registerAssetTypesRoutes(
     const payload = updateAssetTypeSchema.parse(request.body);
 
     try {
-      const assetType = service.updateAssetType(id, payload);
+      const assetType = service.updateAssetType(id, payload as any);
 
       if (!assetType) {
         return reply.status(404).send({ error: 'asset_type_not_found' });
@@ -152,7 +152,7 @@ export async function registerAssetTypesRoutes(
     const payload = setCustomFieldValueSchema.parse(request.body);
 
     try {
-      const value = service.setCustomFieldValue(assetId, payload);
+      const value = service.setCustomFieldValue(assetId, payload as any);
       return reply.send(value);
     } catch (error) {
       const err = error as Error;

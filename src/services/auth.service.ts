@@ -367,7 +367,7 @@ export class AuthService {
     // Update last used
     apiKey.lastUsedAt = new Date().toISOString();
 
-    return { user, scopes: apiKey.scopes };
+    return { user, scopes: apiKey.scopes as PermissionScope[] };
   }
 
   /**
@@ -466,7 +466,7 @@ export class AuthService {
   /**
    * Update user
    */
-  updateUser(id: string, updates: Partial<User>): User | undefined {
+  updateUser(id: string, updates: Partial<User> & { password?: string }): User | undefined {
     if (updates.password) {
       updates.passwordHash = bcrypt.hashSync(updates.password, this.config.bcryptRounds);
       delete updates.password;

@@ -10,6 +10,14 @@ interface ListOptions {
 
 export class MemoryStore {
   assets = new Map<string, Asset3D>();
+
+  getAssets(): IterableIterator<Asset3D> {
+    return this.assets.values();
+  }
+
+  getAsset(id: string) {
+    return this.assets.get(id) ?? null;
+  }
   lightingPresets = new Map<string, LightingPreset>();
   renderPresets = new Map<string, RenderPreset>();
   materialVariants = new Map<string, MaterialVariant>();
@@ -22,9 +30,7 @@ export class MemoryStore {
     return assetWithId;
   }
 
-  getAsset(id: string) {
-    return this.assets.get(id) ?? null;
-  }
+
 
   listAssets(options?: ListOptions) {
     let assets = Array.from(this.assets.values());
@@ -168,3 +174,6 @@ export class MemoryStore {
     return this.materialVariants.delete(id);
   }
 }
+
+// Type alias for services that reference PgStore (future PostgreSQL implementation)
+export type PgStore = MemoryStore;

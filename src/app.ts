@@ -104,7 +104,7 @@ function createAsyncStore(memoryStore: MemoryStore): Store {
  * Adapter to make Store compatible with ManifestStore interface
  */
 class StoreAdapter implements ManifestStore {
-  constructor(private readonly store: Store) {}
+  constructor(private readonly store: Store) { }
 
   async getAsset(id: string) {
     return this.store.getAsset(id);
@@ -961,20 +961,19 @@ export async function createApp() {
     if (!asset) return reply.status(404).send({ error: 'asset_not_found' });
 
     try {
-      const usdzUrl = await usdzConverter.convertToUSDZ(asset.masterUrl, {
-        assetId: id,
-        assetName: asset.name,
-      });
+      const result = await usdzConverter.convertToUSDZ(id, asset.masterUrl);
 
       // Update asset with USDZ URL
-      await store.updateAsset(id, {
-        usdzUrl,
-      });
+      if (result.success && result.usdzUrl) {
+        await store.updateAsset(id, {
+          usdzUrl: result.usdzUrl,
+        });
+      }
 
       return reply.send({
         assetId: id,
-        usdzUrl,
-        message: 'USDZ conversion completed',
+        usdzUrl: result.usdzUrl,
+        message: result.message || 'USDZ conversion completed',
       });
     } catch (error) {
       const err = error as { message?: string };
@@ -1015,11 +1014,11 @@ export async function createApp() {
     const options = thumbnailSchema.parse(request.body);
 
     try {
-      const thumbnails = await thumbnailGenerator.generateThumbnails(asset.masterUrl, options);
+      const thumbnails = await thumbnailGenerator.generateThumbnails(id, asset.masterUrl, options as any);
 
       // Update asset with thumbnail URLs
       await store.updateAsset(id, {
-        thumbnails: thumbnails.map(t => ({ angle: t.angle, url: t.url })),
+        thumbnails: thumbnails.map(t => ({ angle: t.angle, url: t.url || '' })),
       });
 
       return reply.send({
@@ -1076,12 +1075,11 @@ export async function createApp() {
     const limit = query.limit ? parseInt(query.limit, 10) : 20;
 
     try {
-      const results = await searchService.search(query.q || '', {
-        filters,
-        page,
-        limit,
-        sortBy: query.sortBy || 'relevance',
-      });
+      const results = await searchService.search(
+        { query: query.q || '' } as any,
+        { field: query.sortBy || 'relevance' as any },
+        { page, limit }
+      );
 
       return reply.send(results);
     } catch (error) {
@@ -1145,7 +1143,7 @@ export async function createApp() {
     }).parse(request.body);
 
     try {
-      const results = await searchService.spatialSearch(payload.bounds, payload.strict);
+      const results = await searchService.spatialSearch(payload.bounds as any);
       return reply.send({ bounds: payload.bounds, results });
     } catch (error) {
       const err = error as { message?: string };
@@ -1438,7 +1436,7 @@ export async function createApp() {
   });
 
   app.delete('/assets/:id/categories/:categoryId', async (request, reply) => {
-    const assetId = (request.params as { id: string }).assetId;
+    const assetId = (request.params as { id: string }).id;
     const categoryId = (request.params as { categoryId: string }).categoryId;
 
     try {

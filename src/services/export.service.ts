@@ -8,6 +8,7 @@ import { promisify } from 'node:util';
 import { exec as execCallback } from 'node:child_process';
 import type {
   ExportFormat,
+  ExportCapabilities,
   ExportStatus,
   ExportJob,
   ExportOptions,
@@ -164,14 +165,14 @@ export class ExportService {
   /**
    * Get format capabilities
    */
-  getFormatCapabilities(format: ExportFormat): ReturnType<typeof EXPORT_FORMATS[keyof typeof EXPORT_FORMATS]> | null {
+  getFormatCapabilities(format: ExportFormat): ExportCapabilities | null {
     return EXPORT_FORMATS[format] || null;
   }
 
   /**
    * Get all format capabilities
    */
-  getAllCapabilities(): Record<string, ReturnType<typeof EXPORT_FORMATS[keyof typeof EXPORT_FORMATS]>> {
+  getAllCapabilities(): Record<string, ExportCapabilities> {
     return EXPORT_FORMATS;
   }
 

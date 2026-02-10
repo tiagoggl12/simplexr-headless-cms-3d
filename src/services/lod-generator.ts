@@ -205,7 +205,7 @@ export class LODGenerator {
       const transforms = [];
 
       if (options.applyWeld !== false) {
-        transforms.push(weld({ tolerance: 0.0001 }));
+        transforms.push(weld({ tolerance: 0.0001 } as any));
       }
       if (options.applyPrune !== false) {
         transforms.push(prune());
