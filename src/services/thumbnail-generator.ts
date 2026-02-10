@@ -133,9 +133,10 @@ const DEFAULT_CONFIG: ThumbnailGeneratorConfig = {
   tempDir: '/tmp/simplexr-thumbnails',
   puppeteer: {
     headless: true as boolean,
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
     args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
   },
-  blenderPath: '/Applications/Blender.app/Contents/MacOS/Blender',
+  blenderPath: process.env.BLENDER_PATH || '/Applications/Blender.app/Contents/MacOS/Blender',
   defaultTimeout: 120000, // 2 minutes default for large files
 };
 

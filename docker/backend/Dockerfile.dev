@@ -1,13 +1,66 @@
+# =============================================================================
 # Simplexr Backend - Development Dockerfile
-FROM node:20-alpine
+# Uses Debian-based Node for Blender + Puppeteer/Chromium support
+# =============================================================================
+
+FROM node:20-bookworm-slim
+
+# Install system dependencies for Blender, Puppeteer/Chromium, and build tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Blender
+    blender \
+    # Puppeteer/Chromium dependencies
+    chromium \
+    fonts-liberation \
+    libnss3 \
+    libatk-bridge2.0-0 \
+    libdrm2 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgbm1 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libasound2 \
+    libxshmfence1 \
+    # General utilities
+    curl \
+    ca-certificates \
+    dumb-init \
+    # Python (for some 3D tools)
+    python3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set Puppeteer to use system Chromium
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+
+# Set Blender path
+ENV BLENDER_PATH=/usr/bin/blender
+
 WORKDIR /app
+
+# Copy package files and install dependencies
 COPY package*.json ./
+COPY tsconfig.json ./
 RUN npm install
-RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001 -G nodejs && chown -R nodejs:nodejs /app
+
+# Create temp directories for thumbnails and processing
+RUN mkdir -p /tmp/simplexr-thumbnails /tmp/simplexr-processing /tmp/uploads
+
+# Create non-root user
+RUN addgroup --gid 1001 nodejs && \
+    adduser --disabled-password --gecos "" --uid 1001 --ingroup nodejs nodejs && \
+    chown -R nodejs:nodejs /app /tmp/simplexr-thumbnails /tmp/simplexr-processing /tmp/uploads
+
+# Copy source code
 COPY --chown=nodejs:nodejs src ./src/
-COPY --chown=nodejs:nodejs prisma ./prisma/
+
 USER nodejs
+
 ENV NODE_ENV=development
 ENV PORT=3000
 EXPOSE 3000
+
+# Use tsx watch for hot-reload during development
 CMD ["npx", "tsx", "watch", "--no-cache", "src/server.ts"]

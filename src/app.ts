@@ -11,6 +11,7 @@ import { RenderManifestService, type Store as ManifestStore } from './services/r
 import { Asset3D, AssetStatus, LightingPreset, RenderPreset, MaterialVariant } from './models.js';
 import { createKTX2Processor } from './services/ktx-processor.js';
 import { createLODGenerator } from './services/lod-generator.js';
+import cors from '@fastify/cors';
 import { createCDNService } from './services/cdn-service.js';
 import { createDracoCompressor } from './services/draco-compression.js';
 import { createAssetVersioningService, type AssetVersion } from './services/asset-versioning.js';
@@ -197,7 +198,9 @@ const materialVariantUpdateSchema = z.object({
 });
 
 export async function createApp() {
-  const app = Fastify({ logger: false });
+  const app = Fastify({
+    logger: true
+  });
 
   // Conditionally use PgStore if DATABASE_URL is set, otherwise use MemoryStore
   let store: Store;
@@ -251,6 +254,13 @@ export async function createApp() {
 
   app.register(fastifyStatic, {
     root: publicPath,
+  });
+
+  // Enable CORS
+  await app.register(cors, {
+    origin: true, // Allow all origins for development
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   // Health check endpoint

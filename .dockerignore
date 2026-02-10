@@ -1,0 +1,44 @@
+# Dependencies
+node_modules
+.worktrees
+
+# Build outputs
+dist
+
+# Logs
+logs
+*.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+.gemini
+.agent
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage
+.nyc_output
+
+# Docker
+docker
+
+# Git
+.git
+.gitignore
+
+# Misc
+*.tgz
+.cache
+docs
+tests
