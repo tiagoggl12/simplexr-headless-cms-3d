@@ -1,0 +1,257 @@
+scalar DateTime
+scalar JSON
+
+type Asset3D {
+  id: ID!
+  name: String!
+  masterUrl: String!
+  status: AssetStatus!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  
+  # V2: Material Variants
+  hasMaterialVariants: Boolean
+  textureFormats: JSON
+  lods: JSON
+  
+  # V3: Processing
+  processingStatus: JSON
+  
+  # V4: USDZ and thumbnails
+  usdzUrl: String
+  thumbnails: JSON
+  
+  # Relations
+  materialVariants: [MaterialVariant!]!
+  renderPresets: [RenderPreset!]!
+  customFieldValues: [CustomFieldValue!]!
+  tags: [Tag!]!
+  categories: [Category!]!
+  collections: [Collection!]!
+}
+
+enum AssetStatus {
+  draft
+  processing
+  ready
+  failed
+}
+
+type MaterialVariant {
+  id: ID!
+  name: String!
+  status: MaterialVariantStatus!
+  
+  # Maps
+  albedoMapUrl: String
+  normalMapUrl: String
+  metallicMapUrl: String
+  roughnessMapUrl: String
+  aoMapUrl: String
+  emissiveMapUrl: String
+  
+  # Values
+  baseColor: String
+  metallic: Float
+  roughness: Float
+  
+  createdAt: DateTime!
+}
+
+enum MaterialVariantStatus {
+  draft
+  processing
+  ready
+  failed
+}
+
+type RenderPreset {
+  id: ID!
+  camera: JSON!
+  lighting: LightingPreset!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type LightingPreset {
+  id: ID!
+  name: String!
+  hdriUrl: String!
+  exposure: Float!
+  intensity: Float!
+  tags: [String!]!
+  createdAt: DateTime!
+}
+
+# ============================================
+# Taxonomy
+# ============================================
+
+type Tag {
+  id: ID!
+  name: String!
+  slug: String!
+  color: String
+  description: String
+  parent: Tag
+  children: [Tag!]!
+  assets: [Asset3D!]!
+}
+
+type Category {
+  id: ID!
+  name: String!
+  slug: String!
+  description: String
+  icon: String
+  parent: Category
+  children: [Category!]!
+  order: Int!
+  assets: [Asset3D!]!
+}
+
+# ============================================
+# Collections
+# ============================================
+
+type Collection {
+  id: ID!
+  name: String!
+  slug: String!
+  description: String
+  coverAssetId: String
+  isPublic: Boolean!
+  userId: String!
+  assets: [Asset3D!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+# ============================================
+# Custom Fields
+# ============================================
+
+type AssetType {
+  id: ID!
+  name: String!
+  slug: String!
+  description: String
+  icon: String
+  fields: JSON!
+  isActive: Boolean!
+}
+
+type CustomFieldValue {
+  id: ID!
+  fieldId: String!
+  value: JSON!
+  assetType: AssetType
+}
+
+# ============================================
+# Analytics & Exports
+# ============================================
+
+type ExportJob {
+  id: ID!
+  format: ExportFormat!
+  status: ExportStatus!
+  progress: Int!
+  resultUrl: String
+  error: String
+  createdAt: DateTime!
+  completedAt: DateTime
+}
+
+enum ExportFormat {
+  gltf
+  glb
+  obj
+  usdz
+  stl
+  fbx
+}
+
+enum ExportStatus {
+  pending
+  processing
+  completed
+  failed
+  cancelled
+}
+
+# ============================================
+# Queries & Mutations
+# ============================================
+
+type Query {
+  # Assets
+  assets(
+    filter: AssetFilter
+    limit: Int = 20
+    offset: Int = 0
+    sort: String
+  ): [Asset3D!]!
+  
+  asset(id: ID!): Asset3D
+
+  # Taxonomy
+  tags: [Tag!]!
+  categories: [Category!]!
+  
+  # Collections
+  collections: [Collection!]!
+  collection(slug: String!): Collection
+  
+  # Asset Types
+  assetTypes: [AssetType!]!
+}
+
+type Mutation {
+  # Assets
+  createAsset(input: CreateAssetInput!): Asset3D!
+  updateAsset(id: ID!, input: UpdateAssetInput!): Asset3D!
+  deleteAsset(id: ID!): Boolean!
+  
+  # Processing
+  triggerExport(assetId: ID!, format: ExportFormat!, options: JSON): ExportJob!
+  
+  # Collections
+  createCollection(input: CreateCollectionInput!): Collection!
+  addToCollection(collectionId: ID!, assetId: ID!): Boolean!
+  removeFromCollection(collectionId: ID!, assetId: ID!): Boolean!
+}
+
+# Filters & Inputs
+
+input AssetFilter {
+  status: AssetStatus
+  search: String
+  tagIds: [ID!]
+  categoryIds: [ID!]
+  collectionId: ID
+}
+
+input CreateAssetInput {
+  name: String!
+  masterUrl: String!
+  # Initial metadata
+  tagIds: [ID!]
+  categoryIds: [ID!]
+  customFields: JSON
+}
+
+input UpdateAssetInput {
+  name: String
+  status: AssetStatus
+  tagIds: [ID!]
+  categoryIds: [ID!]
+  customFields: JSON
+}
+
+input CreateCollectionInput {
+  name: String!
+  description: String
+  isPublic: Boolean = false
+  coverAssetId: ID
+}

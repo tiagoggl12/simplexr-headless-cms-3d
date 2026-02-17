@@ -17,6 +17,9 @@ import { createDracoCompressor } from './services/draco-compression.js';
 import { createAssetVersioningService, type AssetVersion } from './services/asset-versioning.js';
 import { createBatchOperationsService, type BatchOperation } from './services/batch-operations.js';
 import { createWebhooksEventsService, type SystemEvent, type Webhook } from './services/webhooks-events.js';
+import mercurius from 'mercurius';
+import fs from 'fs';
+import resolvers from './graphql/resolvers.js';
 
 // V4 Services
 import { getAuthService } from './services/auth.service.js';
@@ -262,6 +265,30 @@ export async function createApp() {
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
+
+  // GraphQL Server (Mercurius)
+  try {
+    const schemaPath = path.join(__dirname, 'graphql/schema.graphql');
+    if (fs.existsSync(schemaPath)) {
+      const schema = fs.readFileSync(schemaPath, 'utf8');
+      app.register(mercurius, {
+        schema,
+        resolvers,
+        graphiql: true, // Enable GraphiQL UI
+        context: (request, reply) => {
+          return {
+            store,
+            app
+          };
+        }
+      });
+      console.log('[GraphQL] Server registered at /graphql');
+    } else {
+      console.warn('[GraphQL] Schema file not found at', schemaPath);
+    }
+  } catch (err) {
+    console.error('[GraphQL] Failed to register plugin:', err);
+  }
 
   // Health check endpoint
   app.get('/health', async () => {
