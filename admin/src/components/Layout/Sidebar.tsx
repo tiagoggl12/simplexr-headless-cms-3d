@@ -38,7 +38,7 @@ export function Sidebar({ className }: SidebarProps) {
 
       <aside
         className={cn(
-          'fixed lg:sticky top-0 left-0 z-50 h-screen w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 ease-in-out',
+          'fixed top-0 left-0 z-50 h-screen w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 ease-in-out',
           !sidebarOpen && '-translate-x-full lg:translate-x-0',
           className
         )}
