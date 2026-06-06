@@ -42,6 +42,9 @@ import { registerWorkflowRoutes } from './routes/workflow.routes.js';
 import { registerExportRoutes } from './routes/exports.routes.js';
 import { registerAnalyticsRoutes } from './routes/analytics.routes.js';
 
+// V6: Manyfold Integration
+import { registerManyfoldRoutes } from './routes/manyfold.routes.js';
+
 /**
  * Store interface for type-safe store usage
  * Both MemoryStore and PgStore implement these methods
@@ -1630,6 +1633,9 @@ export async function createApp() {
 
   // ===== V5: Analytics Routes =====
   await registerAnalyticsRoutes(app, { prefix: '/analytics' });
+
+  // ===== V6: Manyfold Integration Routes =====
+  await registerManyfoldRoutes(app, { prefix: '/manyfold' });
 
   // ===== V5: Initialize Analytics with existing assets =====
   const analyticsService = getAnalyticsService();

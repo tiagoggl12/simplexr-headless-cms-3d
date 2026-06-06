@@ -1,0 +1,106 @@
+# =============================================================================
+# Simplexr Headless CMS 3D - Manyfold Integration Stack
+# =============================================================================
+# Adds a local Manyfold instance for testing the SimpleXR ↔ Manyfold sync.
+#
+# Usage:
+#   # Start everything (infra + Manyfold):
+#   docker compose -f docker/docker-compose.yml -f docker/docker-compose.manyfold.yml up -d
+#
+#   # Or with the full dev stack:
+#   docker compose -f docker/docker-compose.dev.yml -f docker/docker-compose.manyfold.yml up -d
+#
+# After startup:
+#   1. Open Manyfold UI:     http://localhost:3214
+#   2. Create an admin user (first-run setup)
+#   3. Go to Settings → Applications → New Application
+#      - Name:         "SimpleXR Integration"
+#      - Redirect URI: urn:ietf:wg:oauth:2.0:oob
+#      - Scopes:       public, read, write
+#   4. Copy the Client ID and Client Secret
+#   5. Add to your .env:
+#      MANYFOLD_BASE_URL=http://localhost:3214
+#      MANYFOLD_CLIENT_ID=<your-client-id>
+#      MANYFOLD_CLIENT_SECRET=<your-client-secret>
+#   6. Start the backend: npm run dev
+#   7. Test the integration:
+#      curl -s http://localhost:3000/manyfold/test -X POST | jq
+#      curl -s http://localhost:3000/manyfold/models | jq
+# =============================================================================
+
+services:
+  # ─── Manyfold: Self-hosted 3D model manager ──────────────────────────
+  manyfold:
+    image: ghcr.io/manyfold3d/manyfold:latest
+    container_name: simplexr-manyfold
+    environment:
+      # Required: Rails secret key
+      SECRET_KEY_BASE: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8"
+
+      # Database: Use the shared PostgreSQL with a separate database
+      DATABASE_URL: postgresql://dam:dam@postgres:5432/manyfold
+
+      # Redis: Separate instance to avoid key collisions with SimpleXR
+      REDIS_URL: redis://manyfold-redis:6379/0
+
+      # Multiuser mode (enables OAuth2 application management)
+      MULTIUSER: enabled
+    ports:
+      - "3214:3214"
+    volumes:
+      - manyfold_libraries:/libraries
+    networks:
+      - simplexr-network
+    depends_on:
+      manyfold-postgres-init:
+        condition: service_completed_successfully
+      manyfold-redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -q --spider http://localhost:3214/health || exit 1" ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+
+  # ─── Manyfold's own Redis instance ───────────────────────────────────
+  manyfold-redis:
+    image: redis:7-alpine
+    container_name: simplexr-manyfold-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - manyfold_redis_data:/data
+    networks:
+      - simplexr-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ─── Init: Create the Manyfold database in shared PostgreSQL ─────────
+  manyfold-postgres-init:
+    image: postgres:16-alpine
+    container_name: simplexr-manyfold-db-init
+    environment:
+      PGHOST: postgres
+      PGUSER: dam
+      PGPASSWORD: dam
+    entrypoint: >
+      /bin/sh -c "
+        echo 'Waiting for PostgreSQL...';
+        until pg_isready -h postgres -U dam; do sleep 1; done;
+        echo 'Creating manyfold database if not exists...';
+        psql -h postgres -U dam -tc \"SELECT 1 FROM pg_database WHERE datname = 'manyfold'\" | grep -q 1 || psql -h postgres -U dam -c 'CREATE DATABASE manyfold';
+        echo 'Done.';
+      "
+    networks:
+      - simplexr-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  manyfold_libraries:
+  manyfold_redis_data:
