@@ -1,10 +1,29 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import type { IncomingMessage } from 'http';
+import type { ProxyOptions } from 'vite';
 
 // API target: defaults to the locally-running backend; Docker can override
 // with VITE_API_TARGET=http://backend:3000
 const apiTarget = process.env.VITE_API_TARGET ?? 'http://localhost:3000';
+
+// Some API path prefixes (/assets, /uploads) collide with client-side SPA
+// routes. Browser navigations send `Accept: text/html`; API calls (axios)
+// do not. For navigations, bypass the proxy and serve index.html so the SPA
+// router handles deep links / refreshes instead of hitting the JSON API.
+const bypassNavigations = (req: IncomingMessage): string | undefined =>
+  req.headers.accept?.includes('text/html') ? '/index.html' : undefined;
+
+// API path prefixes proxied to the backend during development.
+const API_PREFIXES = ['/assets', '/uploads', '/presets', '/viewer', '/auth', '/variants'];
+
+const proxy: Record<string, ProxyOptions> = Object.fromEntries(
+  API_PREFIXES.map((prefix) => [
+    prefix,
+    { target: apiTarget, changeOrigin: true, bypass: bypassNavigations } satisfies ProxyOptions,
+  ])
+);
 
 export default defineConfig({
   plugins: [react()],
@@ -16,42 +35,6 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
-    proxy: {
-      '/assets': {
-        target: apiTarget,
-        changeOrigin: true,
-        configure: (proxy, _options) => {
-          proxy.on('error', (err, _req, _res) => {
-            console.log('proxy error', err);
-          });
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
-            console.log('Sending Request to the Target:', req.method, req.url);
-          });
-          proxy.on('proxyRes', (proxyRes, req, _res) => {
-            console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
-          });
-        },
-      },
-      '/uploads': {
-        target: apiTarget,
-        changeOrigin: true,
-      },
-      '/presets': {
-        target: apiTarget,
-        changeOrigin: true,
-      },
-      '/viewer': {
-        target: apiTarget,
-        changeOrigin: true,
-      },
-      '/auth': {
-        target: apiTarget,
-        changeOrigin: true,
-      },
-      '/variants': {
-        target: apiTarget,
-        changeOrigin: true,
-      },
-    },
+    proxy,
   },
 });
