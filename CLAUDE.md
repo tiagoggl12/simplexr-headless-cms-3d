@@ -4,136 +4,104 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
+### Backend (repo root)
+
 ```bash
-# Development
-npm run dev          # Start dev server with tsx watch (port 3000)
+npm run dev          # Dev server: tsx watch src/server.ts (port 3000)
+npm run build        # Compile TypeScript -> dist/
+npm start            # Run production build (node dist/server.js)
 
-# Build
-npm run build        # Compile TypeScript to dist/
-npm start            # Run production build
-
-# Testing
-npm test             # Run tests once
-npm run test:watch   # Run tests in watch mode
-
-# Local services
-docker compose -f docker/docker-compose.yml up    # PostgreSQL, Redis, MinIO
+npm test             # Run all tests once (vitest run)
+npm run test:watch   # Watch mode
+npx vitest run tests/assets.test.ts          # Run a single test file
+npx vitest run -t "creates an asset"          # Run tests matching a name
 ```
+
+### Admin frontend (`admin/`)
+
+Separate React + Vite SPA (React Three Fiber viewer, TanStack Query, Tailwind). It is **not** part of the backend build.
+
+```bash
+cd admin
+npm run dev          # Vite dev server (proxies API to backend)
+npm run build        # tsc -b && vite build
+npm run lint         # eslint
+```
+
+### Local infrastructure
+
+```bash
+docker compose -f docker/docker-compose.yml up        # Postgres, Redis, MinIO (+ mc bucket init)
+scripts/docker-up.sh / docker-down.sh / docker-reset.sh / docker-logs.sh   # Helper wrappers
+docker compose -f docker/docker-compose.manyfold.yml up   # Optional: local Manyfold instance for integration testing
+```
+
+`docker/docker-compose.dev.yml` / `.override.yml` build the backend + admin in containers (Blender, Puppeteer support).
 
 ## Architecture
 
-This is a headless DAM (Digital Asset Management) for 3D assets focused on e-commerce delivery. GLB files are the master format; USDZ and thumbnails are derived artifacts.
+Headless DAM (Digital Asset Management) for 3D assets, focused on e-commerce delivery. **GLB is the master format; USDZ, thumbnails, LODs, and compressed variants are derived artifacts.**
 
 ### Core Stack
 
-- **Runtime**: Node.js (ES2022 modules)
-- **Web Framework**: Fastify (v4.26.2)
-- **Language**: TypeScript (v5.5.4) with strict type checking
-- **Database**: PostgreSQL via Prisma ORM (MemoryStore for development)
-- **Queue System**: BullMQ with Redis for background jobs
-- **Storage**: AWS S3 SDK with MinIO for local development
-- **3D Processing**: glTF-Transform for GLB manipulation, Draco compression, KTX2 textures
+- **Runtime**: Node.js, ES2022 ESM (`"type": "module"`)
+- **Web framework**: Fastify v4
+- **Language**: TypeScript v5 (strict), `moduleResolution: Bundler`
+- **GraphQL**: Mercurius, mounted at `/graphql` with GraphiQL enabled
+- **Queues**: BullMQ + Redis (ioredis) for background workers
+- **Storage**: AWS S3 SDK targeting MinIO locally
+- **3D processing**: glTF-Transform (+ Draco, KTX2, meshoptimizer), Puppeteer for thumbnail rendering
+- **Auth**: JWT (`jsonwebtoken`) + bcrypt, API-key scopes
 
-### Key Features
+### Entry point & app composition
 
-**GLB Master Pipeline**: All 3D assets use GLB as the source of truth. The processing pipeline generates:
-- USDZ for iOS AR Quick Look
-- Thumbnail renders per lighting preset
-- Optimized viewer assets with Draco/KTX2 compression
+`src/server.ts` simply boots `createApp()` from **`src/app.ts`**. `app.ts` is a ~1650-line monolith that wires up the store, all services, the GraphQL plugin, and most REST routes inline. **Newer feature areas are extracted into `src/routes/*.routes.ts`** and registered near the bottom of `app.ts` (`registerAuthRoutes`, `registerAssetTypesRoutes`, `registerWorkflowRoutes`, `registerExportRoutes`, `registerAnalyticsRoutes`, `registerManyfoldRoutes`). When adding endpoints, prefer a new `*.routes.ts` module over growing `app.ts`.
 
-**Advanced Capabilities**:
-- **Material Variants**: PBR-based material customization
-- **Level of Detail (LOD)**: Automatic LOD generation for performance
-- **Custom Fields**: Flexible metadata system with JSON schemas
-- **Workflow System**: Asset lifecycle management with events
-- **Analytics**: Asset views, downloads, sharing metrics
-- **Export System**: Multi-format export capabilities
+### Storage abstraction (important)
 
-### Data Model
+The data store is swapped at runtime based on env, behind a single `Store` interface defined in `app.ts`:
 
-Core entities in `src/models/`:
-- `Asset3D`: master GLB URL, status, timestamps, variants
-- `LightingPreset`: HDRI URL with exposure/intensity, tags
-- `MaterialVariant`: PBR material configurations with textures
-- `RenderPreset`: combines asset + lighting preset + camera
-- `CustomField`: JSON schema for dynamic metadata
-- `WorkflowEvent`: Asset lifecycle events
-- `ExportJob`: Background export processing
+- **No `DATABASE_URL`** → `MemoryStore` (`src/store.ts`), wrapped by `createAsyncStore()` to satisfy the async interface. This is the default and what most tests run against.
+- **`DATABASE_URL` set** → `PgStore` (`src/services/pg-store.ts`), using **`pg` directly** (raw SQL via `src/db.ts` pool helpers).
 
-### Service Architecture (23 services)
+There is a `prisma/schema.prisma`, but **Prisma is not used at runtime** — it documents the intended Postgres schema for `PgStore`. Do not assume a Prisma client is available.
 
-**Core Services**:
-- `StorageService`: Abstract storage interface (S3/MinIO)
-- `CDNService`: Content delivery network integration
-- `RenderManifestService`: Dynamic viewer configuration
+### Service & model layout
 
-**3D Processing**:
-- `DracoCompressionService`: Mesh optimization
-- `KTX2ProcessorService`: Texture compression
-- `LODGeneratorService`: Level of detail generation
-- `USDZConverterService`: iOS AR format conversion
+- **Models split across two locations**: core entities (`Asset3D`, `LightingPreset`, `RenderPreset`, `MaterialVariant`, plus `RenderManifest`) live in the single file **`src/models.ts`**; feature-specific models live in **`src/models/*.ts`** (`auth`, `tags`, `custom-fields`, `workflow`, `export`, `analytics`).
+- **Services** in `src/services/` are constructed via factory functions — either `createX()` (new instance) or `getX()` (singleton). Match the existing pattern when adding one.
+- **Workers** in `src/workers/` (`ktx-compression`, `lod-generation`) are BullMQ processors for the heavy 3D jobs.
 
-**Business Logic**:
-- `AssetVersioningService`: Asset version management
-- `BatchOperationsService`: Bulk processing
-- `WebhookService`: External integrations
-- `AnalyticsService`: Metrics and tracking
+### Feature areas (roughly versioned V0→V6 by commit history)
 
-### API Design
+Asset CRUD & presigned uploads · lighting/render/material presets · render manifests for the viewer · Draco compression · KTX2 texture compression · LOD generation · USDZ conversion (iOS AR) · Puppeteer thumbnail rendering · asset versioning · batch operations · webhooks & system events · search (incl. spatial/similar) · tags/categories/collections · custom fields · workflow lifecycle · exports · analytics · **Manyfold integration (V6)**.
 
-Versioned API endpoints (V0-V5) with comprehensive CRUD operations:
+### Manyfold integration
 
-**Asset Management**:
-- `POST /assets` - Create Asset3D
-- `GET /assets/:id` - Get asset details
-- `PATCH /assets/:id` - Update asset
-- `DELETE /assets/:id` - Delete asset
+`src/services/manyfold-sync.service.ts` + `src/routes/manyfold.routes.ts` (prefix `/manyfold`) bridge to a self-hosted [Manyfold](https://manyfold.app) instance via its JSON-LD REST API (v0): OAuth2 client-credentials auth, import models → `Asset3D`, export assets via Tus upload, and ID-mapped bidirectional sync. Configured via `MANYFOLD_BASE_URL` / `MANYFOLD_CLIENT_ID` / `MANYFOLD_CLIENT_SECRET`.
 
-**Upload System**:
-- `POST /uploads/presign` - Get presigned URL
-- `POST /uploads/complete` - Mark upload complete
+### Module conventions
 
-**Viewer Delivery**:
-- `GET /viewer/assets/:assetId` - Asset info
-- `GET /viewer/assets/:assetId/render` - Render manifest
-- `GET /viewer/presets` - List lighting presets
-- `GET /viewer/materials` - List material variants
-
-**Advanced Features**:
-- `POST /analytics/events` - Track usage
-- `POST /webhooks` - Event subscriptions
-- `POST /exports` - Create export jobs
-- `POST /custom-fields` - Define metadata schemas
-
-### Module System
-
-ES2022 modules with explicit `/` suffix imports:
+ES module imports **must** use the `.js` suffix even for `.ts` sources:
 ```typescript
-import { Asset3D } from './models/asset.js'
-import { StorageService } from './services/storage.js'
+import { Asset3D } from './models.js';
+import { getAuthService } from './services/auth.service.js';
 ```
+
+### Environment variables
+
+See `.env.example` for the full list. Key ones:
+- `PORT` (3000), `HOST` (0.0.0.0)
+- `DATABASE_URL` — presence switches `MemoryStore` → `PgStore`
+- `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` — BullMQ
+- `S3_ENDPOINT` / `S3_BUCKET` / `S3_PUBLIC_ENDPOINT` / `AWS_*` — MinIO/S3; `STORAGE_BASE_URL` is the stub fallback
+- `USE_REAL_SERVICES` — `false` uses in-memory stubs for S3/Redis
+- `MANYFOLD_*` — Manyfold integration
 
 ### Testing
 
-Vitest-based test suite covering:
-- Asset CRUD operations
-- 3D processing features
-- Authentication and authorization
-- Analytics and metrics
-- Custom field functionality
-- Workflow and events
+Vitest (`globals: true`, node env). 28 test files in `tests/`, mostly exercising `createApp()` with the in-memory store over HTTP (supertest). `tests/fixtures/` holds sample GLBs; some tests (`poltrona-*`) run the real 3D pipeline and write to `tests/thumbnails-output/`.
 
-### Environment Variables
+### Dev/processing scripts
 
-- `PORT` - Server port (default: 3000)
-- `HOST` - Bind address (default: 0.0.0.0)
-- `STORAGE_BASE_URL` - Storage base URL
-- `DATABASE_URL` - PostgreSQL connection string
-- `REDIS_URL` - Redis connection string
-
-### Scripts for Development
-
-Utility scripts in `scripts/`:
-- `generate-lods.ts` - Generate Level of Detail for models
-- `poltrona-v3-complete.ts` - Complete processing workflow
-- `process-poltrona.ts` - Asset processing pipeline
+`scripts/` mixes shell infra helpers (`docker-*.sh`, `infra.sh`, `backup.sh`, `restore.sh`) and TypeScript pipeline runners (`generate-lods.ts`, `process-poltrona.ts`, `poltrona-v3-complete.ts`, `pipeline-ecommerce.ts`) — run the latter with `tsx`.
