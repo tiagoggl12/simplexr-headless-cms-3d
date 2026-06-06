@@ -9,3 +9,5 @@ coverage
 # Ignore compiled test files
 tests/*.js
 !tests/*.ts
+# Sample GLBs copied into public/ by the seed script
+public/*.glb

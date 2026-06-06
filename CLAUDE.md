@@ -15,6 +15,8 @@ npm test             # Run all tests once (vitest run)
 npm run test:watch   # Watch mode
 npx vitest run tests/assets.test.ts          # Run a single test file
 npx vitest run -t "creates an asset"          # Run tests matching a name
+
+npm run seed         # Seed sample assets into a running API (idempotent; API_BASE overridable)
 ```
 
 ### Admin frontend (`admin/`)
