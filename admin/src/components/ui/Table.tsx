@@ -144,7 +144,7 @@ interface EmptyTableRowProps {
   message?: string;
 }
 
-export function EmptyTableRow({ colSpan, message = 'Nenhum registro encontrado' }: EmptyTableRowProps): JSX.Element {
+export function EmptyTableRow({ colSpan, message = 'No records found' }: EmptyTableRowProps): JSX.Element {
   return (
     <tr>
       <td colSpan={colSpan} className="px-6 py-8 text-center text-sm text-gray-500">

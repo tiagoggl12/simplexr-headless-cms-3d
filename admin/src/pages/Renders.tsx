@@ -98,119 +98,58 @@ function RenderFormDialog({ isOpen, onClose }: RenderFormDialogProps) {
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent title="Create Render Preset">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Asset
-            </label>
-            <Select
-              {...register('assetId')}
-              className={errors.assetId ? 'border-red-300' : ''}
-            >
-              <option value="">Select an asset...</option>
-              {assets.map((asset) => (
-                <option key={asset.id} value={asset.id}>
-                  {asset.name}
-                </option>
-              ))}
-            </Select>
-            {errors.assetId && (
-              <p className="mt-1 text-sm text-red-600">{errors.assetId.message}</p>
-            )}
-          </div>
+          <Select
+            label="Asset"
+            required
+            {...register('assetId')}
+            error={errors.assetId?.message}
+          >
+            <option value="">Select an asset...</option>
+            {assets.map((asset) => (
+              <option key={asset.id} value={asset.id}>
+                {asset.name}
+              </option>
+            ))}
+          </Select>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Lighting Preset
-            </label>
-            <Select
-              {...register('lightingPresetId')}
-              className={errors.lightingPresetId ? 'border-red-300' : ''}
-            >
-              <option value="">Select a lighting preset...</option>
-              {lightingPresets.map((preset) => (
-                <option key={preset.id} value={preset.id}>
-                  {preset.name}
-                </option>
-              ))}
-            </Select>
-            {errors.lightingPresetId && (
-              <p className="mt-1 text-sm text-red-600">{errors.lightingPresetId.message}</p>
-            )}
-          </div>
+          <Select
+            label="Lighting Preset"
+            required
+            {...register('lightingPresetId')}
+            error={errors.lightingPresetId?.message}
+          >
+            <option value="">Select a lighting preset...</option>
+            {lightingPresets.map((preset) => (
+              <option key={preset.id} value={preset.id}>
+                {preset.name}
+              </option>
+            ))}
+          </Select>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Field of View (FOV)
-            </label>
-            <Input
-              type="number"
-              min="10"
-              max="120"
-              {...register('fov', { valueAsNumber: true })}
-              className={errors.fov ? 'border-red-300' : ''}
-            />
-            {errors.fov && (
-              <p className="mt-1 text-sm text-red-600">{errors.fov.message}</p>
-            )}
-          </div>
+          <Input
+            label="Field of View (FOV)"
+            type="number"
+            min="10"
+            max="120"
+            {...register('fov', { valueAsNumber: true })}
+            error={errors.fov?.message}
+          />
 
           <div className="border-t border-gray-200 pt-4">
             <h4 className="text-sm font-medium text-gray-700 mb-3">Camera Position</h4>
             <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">X</label>
-                <Input
-                  type="number"
-                  step="0.1"
-                  {...register('positionX', { valueAsNumber: true })}
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Y</label>
-                <Input
-                  type="number"
-                  step="0.1"
-                  {...register('positionY', { valueAsNumber: true })}
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Z</label>
-                <Input
-                  type="number"
-                  step="0.1"
-                  {...register('positionZ', { valueAsNumber: true })}
-                />
-              </div>
+              <Input label="X" type="number" step="0.1" {...register('positionX', { valueAsNumber: true })} />
+              <Input label="Y" type="number" step="0.1" {...register('positionY', { valueAsNumber: true })} />
+              <Input label="Z" type="number" step="0.1" {...register('positionZ', { valueAsNumber: true })} />
             </div>
           </div>
 
           <div>
             <h4 className="text-sm font-medium text-gray-700 mb-3">Camera Target</h4>
             <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">X</label>
-                <Input
-                  type="number"
-                  step="0.1"
-                  {...register('targetX', { valueAsNumber: true })}
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Y</label>
-                <Input
-                  type="number"
-                  step="0.1"
-                  {...register('targetY', { valueAsNumber: true })}
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Z</label>
-                <Input
-                  type="number"
-                  step="0.1"
-                  {...register('targetZ', { valueAsNumber: true })}
-                />
-              </div>
+              <Input label="X" type="number" step="0.1" {...register('targetX', { valueAsNumber: true })} />
+              <Input label="Y" type="number" step="0.1" {...register('targetY', { valueAsNumber: true })} />
+              <Input label="Z" type="number" step="0.1" {...register('targetZ', { valueAsNumber: true })} />
             </div>
           </div>
 
@@ -337,7 +276,7 @@ export function Renders() {
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleDelete(preset)}
-                          className="p-1.5 text-gray-400 hover:text-red-600 rounded hover:bg-red-50"
+                          className="p-1.5 text-gray-500 hover:text-red-600 rounded hover:bg-red-50"
                           title="Delete"
                         >
                           <Trash2 className="w-4 h-4" />

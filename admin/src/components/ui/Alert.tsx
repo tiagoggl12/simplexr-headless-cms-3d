@@ -155,8 +155,8 @@ export function SearchInput({
             onChange('');
             onClear?.();
           }}
-          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-          aria-label="Limpar busca"
+          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-600"
+          aria-label="Clear search"
         >
           <svg
             className="h-5 w-5"

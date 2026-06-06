@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Edit3, Save, X, Loader2 } from 'lucide-react';
-import { assetsApi, lightingApi } from '@/lib/api.js';
+import { assetsApi, lightingApi, renderPresetsApi } from '@/lib/api.js';
 import { AssetStatus } from '@/lib/types.js';
 import { Button } from '@/components/ui/Button.js';
 import { Input } from '@/components/ui/Input.js';
@@ -32,6 +32,12 @@ export function AssetDetail() {
   const { data: lightingData } = useQuery({
     queryKey: ['lighting-presets'],
     queryFn: () => lightingApi.list(),
+  });
+
+  const { data: renderPresetsData } = useQuery({
+    queryKey: ['render-presets', id],
+    queryFn: () => renderPresetsApi.list(id!),
+    enabled: !!id,
   });
 
   // Update form when asset data changes
@@ -95,15 +101,19 @@ export function AssetDetail() {
     );
   }
 
+  const renderPresets = renderPresetsData?.items ?? [];
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link to="/assets">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
+          <Link
+            to="/assets"
+            aria-label="Back to assets"
+            className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+          >
+            <ArrowLeft className="w-4 h-4" aria-hidden="true" />
           </Link>
           {isEditing ? (
             <div className="flex items-center gap-3">
@@ -217,9 +227,33 @@ export function AssetDetail() {
               <h3 className="text-lg font-semibold text-gray-900">Render Presets</h3>
             </div>
             <CardContent>
-              <p className="text-sm text-gray-500">
-                Render presets associated with this asset will appear here.
-              </p>
+              {renderPresets.length === 0 ? (
+                <p className="text-sm text-gray-500">
+                  No render presets yet. Create one on the Render Presets page.
+                </p>
+              ) : (
+                <ul className="divide-y divide-gray-100 -my-2">
+                  {renderPresets.map((preset) => (
+                    <li key={preset.id} className="py-3 flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {preset.lightingPresetName ?? 'Lighting preset'}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          FOV {preset.camera.fov}° · pos [{preset.camera.position.join(', ')}]
+                        </p>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setSelectedLightingId(preset.lightingPresetId)}
+                      >
+                        Preview lighting
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </CardContent>
           </Card>
         </div>

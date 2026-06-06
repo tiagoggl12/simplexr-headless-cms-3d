@@ -60,11 +60,11 @@ export function Uploads() {
     files.forEach((file) => {
       const ext = '.' + file.name.split('.').pop()?.toLowerCase();
       if (!ALLOWED_EXTENSIONS.includes(ext)) {
-        invalid.push({ file, reason: 'Extensão não permitida' });
+        invalid.push({ file, reason: 'File type not allowed' });
         return;
       }
       if (file.size > MAX_FILE_SIZE) {
-        invalid.push({ file, reason: 'Arquivo muito grande (max 100MB)' });
+        invalid.push({ file, reason: 'File too large (max 100MB)' });
         return;
       }
       valid.push(file);
@@ -200,10 +200,10 @@ export function Uploads() {
     setIsUploading(false);
 
     if (successCount > 0) {
-      toast.addToast(`${successCount} arquivo(s) enviado(s) com sucesso`, 'success');
+      toast.addToast(`${successCount} file(s) uploaded successfully`, 'success');
     }
     if (errorCount > 0) {
-      toast.addToast(`${errorCount} arquivo(s) falharam`, 'error');
+      toast.addToast(`${errorCount} file(s) failed`, 'error');
     }
   };
 
@@ -221,9 +221,9 @@ export function Uploads() {
         <div className="w-16 h-16 mx-auto bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
           <Sparkles className="w-8 h-8 text-primary" />
         </div>
-        <h1 className="text-3xl font-bold text-gray-900">Upload de Modelos 3D</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Upload 3D Models</h1>
         <p className="text-gray-500 mt-2">
-          Arraste e solte seus arquivos GLB ou GLTF para adicionar à sua biblioteca
+          Drag and drop your GLB or GLTF files to add them to your library
         </p>
       </div>
 
@@ -246,6 +246,7 @@ export function Uploads() {
               accept=".glb,.gltf"
               multiple
               onChange={handleFileInput}
+              aria-label="Upload 3D model files (GLB or glTF)"
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             />
 
@@ -255,16 +256,16 @@ export function Uploads() {
               </div>
               <div>
                 <p className="text-lg font-medium text-gray-900">
-                  Arraste seus arquivos aqui
+                  Drag your files here
                 </p>
                 <p className="text-sm text-gray-500 mt-1">
-                  ou clique para navegar em seus arquivos
+                  or click to browse your files
                 </p>
               </div>
-              <div className="flex items-center justify-center gap-4 text-xs text-gray-400">
+              <div className="flex items-center justify-center gap-4 text-xs text-gray-500">
                 <span>GLB • GLTF</span>
                 <span>•</span>
-                <span>até 100MB</span>
+                <span>up to 100MB</span>
               </div>
             </div>
           </div>
@@ -279,13 +280,13 @@ export function Uploads() {
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Arquivos na Fila</h2>
                 <p className="text-sm text-gray-500">
-                  {uploads.length} arquivo(s) • {pendingCount} pendente(s)
+                  {uploads.length} file(s) • {pendingCount} pending
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 {completedCount > 0 && (
                   <Button variant="secondary" size="sm" onClick={clearCompleted}>
-                    Limpar concluídos
+                    Clear completed
                   </Button>
                 )}
                 {pendingCount > 0 && (
@@ -298,7 +299,7 @@ export function Uploads() {
                     ) : (
                       <>
                         <UploadCloud className="w-4 h-4" />
-                        Enviar {pendingCount} arquivo(s)
+                        Upload {pendingCount} file(s)
                       </>
                     )}
                   </Button>
@@ -395,12 +396,12 @@ export function Uploads() {
             <div className="text-center">
               <FolderOpen className="w-12 h-12 mx-auto text-gray-300 mb-4" />
               <h3 className="font-medium text-gray-900 mb-2">
-                Nenhum arquivo selecionado
+                No files selected
               </h3>
               <p className="text-sm text-gray-500 max-w-md mx-auto">
-                Selecione arquivos GLB ou GLTF do seu computador para fazer upload.
-                Os arquivos serão processados e estarão disponíveis na sua biblioteca
-                após o upload.
+                Select GLB or GLTF files from your computer to upload.
+                Files will be processed and become available in your library
+                after upload.
               </p>
             </div>
           </CardContent>

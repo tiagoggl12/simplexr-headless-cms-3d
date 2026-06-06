@@ -18,7 +18,7 @@ export function AssetGrid({
   viewMode: controlledViewMode,
   onViewModeChange,
   onDelete,
-  emptyMessage = 'Nenhum asset encontrado',
+  emptyMessage = 'No assets found',
 }: AssetGridProps) {
   const [localViewMode, setLocalViewMode] = useState<'grid' | 'list'>('grid');
   const viewMode = controlledViewMode ?? localViewMode;
@@ -106,7 +106,7 @@ export function AssetGrid({
                   Criado em
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                  Ações
+                  Actions
                 </th>
               </tr>
             </thead>
@@ -152,7 +152,7 @@ export function AssetGrid({
                       onClick={() => onDelete?.(asset.id)}
                       className="text-red-600 hover:text-red-800"
                     >
-                      Excluir
+                      Delete
                     </button>
                   </td>
                 </tr>

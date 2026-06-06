@@ -49,8 +49,8 @@ function SearchInputLocal({ value, onChange, placeholder = 'Buscar...', classNam
             onChange('');
             onClear?.();
           }}
-          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-          aria-label="Limpar busca"
+          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-600"
+          aria-label="Clear search"
         >
           <X className="h-4 w-4" />
         </button>
@@ -118,7 +118,7 @@ export function FilterBar({
         {/* Clear Filters */}
         {hasActiveFilters && onClearFilters && (
           <Button variant="ghost" size="sm" onClick={onClearFilters}>
-            Limpar filtros
+            Clear filters
           </Button>
         )}
       </div>

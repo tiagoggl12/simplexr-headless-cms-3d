@@ -38,7 +38,7 @@ export const LoadingOverlay = forwardRef<HTMLDivElement, LoadingOverlayProps>(
         {message && (
           <p className="text-gray-600 font-medium animate-pulse">{message}</p>
         )}
-        <span className="sr-only">Carregando...</span>
+        <span className="sr-only">Loading...</span>
       </div>
     );
 
@@ -71,7 +71,7 @@ export function InlineLoader({ size = 'sm', className, ...props }: InlineLoaderP
 }
 
 // Full page loader
-export function FullPageLoader({ message = 'Carregando...' }: { message?: string }): JSX.Element {
+export function FullPageLoader({ message = 'Loading...' }: { message?: string }): JSX.Element {
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white">
       <Spinner size="xl" />

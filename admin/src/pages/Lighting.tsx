@@ -90,81 +90,49 @@ function LightingFormDialog({ isOpen, onClose, preset }: LightingFormDialogProps
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent title={isEditing ? 'Edit Lighting Preset' : 'Create Lighting Preset'}>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Name
-            </label>
-            <Input
-              {...register('name')}
-              placeholder="Studio Lighting"
-              className={errors.name ? 'border-red-300' : ''}
-            />
-            {errors.name && (
-              <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
-            )}
-          </div>
+          <Input
+            label="Name"
+            required
+            {...register('name')}
+            placeholder="Studio Lighting"
+            error={errors.name?.message}
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              HDRI URL
-            </label>
-            <Input
-              {...register('hdriUrl')}
-              placeholder="https://example.com/hdri/studio.hdr"
-              className={errors.hdriUrl ? 'border-red-300' : ''}
-            />
-            {errors.hdriUrl && (
-              <p className="mt-1 text-sm text-red-600">{errors.hdriUrl.message}</p>
-            )}
-          </div>
+          <Input
+            label="HDRI URL"
+            required
+            {...register('hdriUrl')}
+            placeholder="https://example.com/hdri/studio.hdr"
+            error={errors.hdriUrl?.message}
+          />
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Exposure
-              </label>
-              <Input
-                type="number"
-                step="0.1"
-                min="0"
-                max="10"
-                {...register('exposure', { valueAsNumber: true })}
-                className={errors.exposure ? 'border-red-300' : ''}
-              />
-              {errors.exposure && (
-                <p className="mt-1 text-sm text-red-600">{errors.exposure.message}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Intensity
-              </label>
-              <Input
-                type="number"
-                step="0.1"
-                min="0"
-                max="10"
-                {...register('intensity', { valueAsNumber: true })}
-                className={errors.intensity ? 'border-red-300' : ''}
-              />
-              {errors.intensity && (
-                <p className="mt-1 text-sm text-red-600">{errors.intensity.message}</p>
-              )}
-            </div>
+            <Input
+              label="Exposure"
+              type="number"
+              step="0.1"
+              min="0"
+              max="10"
+              {...register('exposure', { valueAsNumber: true })}
+              error={errors.exposure?.message}
+            />
+            <Input
+              label="Intensity"
+              type="number"
+              step="0.1"
+              min="0"
+              max="10"
+              {...register('intensity', { valueAsNumber: true })}
+              error={errors.intensity?.message}
+            />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tags (comma-separated)
-            </label>
-            <Input
-              {...register('tags')}
-              placeholder="studio, interior, product"
-            />
-            <p className="mt-1 text-xs text-gray-500">
-              Add tags to categorize this preset (e.g., studio, outdoor, product)
-            </p>
-          </div>
+          <Input
+            label="Tags (comma-separated)"
+            {...register('tags')}
+            placeholder="studio, interior, product"
+            hint="Add tags to categorize this preset (e.g., studio, outdoor, product)"
+          />
 
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={onClose}>
@@ -326,13 +294,13 @@ export function Lighting() {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleEdit(preset)}
-                      className="p-1.5 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100"
+                      className="p-1.5 text-gray-500 hover:text-gray-600 rounded hover:bg-gray-100"
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(preset)}
-                      className="p-1.5 text-gray-400 hover:text-red-600 rounded hover:bg-red-50"
+                      className="p-1.5 text-gray-500 hover:text-red-600 rounded hover:bg-red-50"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

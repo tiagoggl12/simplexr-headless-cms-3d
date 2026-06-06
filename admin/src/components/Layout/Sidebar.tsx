@@ -50,7 +50,7 @@ export function Sidebar({ className }: SidebarProps) {
           </h1>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden text-gray-400 hover:text-gray-600"
+            className="lg:hidden text-gray-500 hover:text-gray-600"
           >
             <X className="w-5 h-5" />
           </button>
@@ -82,7 +82,7 @@ export function Sidebar({ className }: SidebarProps) {
 
         {/* Footer */}
         <div className="p-4 border-t border-gray-100">
-          <p className="text-xs text-gray-400 text-center">
+          <p className="text-xs text-gray-500 text-center">
             3D Digital Asset Management v0.1.0
           </p>
         </div>

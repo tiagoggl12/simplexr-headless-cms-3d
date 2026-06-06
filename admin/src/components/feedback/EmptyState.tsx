@@ -86,12 +86,12 @@ export function EmptyStateNoAssets({ onCreate }: { onCreate?: () => void }): JSX
           />
         </svg>
       }
-      title="Nenhum asset encontrado"
-      description="Comece criando seu primeiro asset 3D para ver aqui."
+      title="No assets found"
+      description="Create your first 3D asset to see it here."
       action={
         onCreate
           ? {
-              label: 'Criar Asset',
+              label: 'Create Asset',
               onClick: onCreate,
               icon: (
                 <svg
@@ -137,12 +137,12 @@ export function EmptyStateNoResults({ onClear }: { onClear?: () => void }): JSX.
           />
         </svg>
       }
-      title="Nenhum resultado encontrado"
-      description="Tente ajustar seus filtros ou termos de busca."
+      title="No results found"
+      description="Try adjusting your filters or search terms."
       action={
         onClear
           ? {
-              label: 'Limpar filtros',
+              label: 'Clear filters',
               onClick: onClear,
             }
           : undefined
@@ -178,12 +178,12 @@ export function EmptyStateError({
           />
         </svg>
       }
-      title="Erro ao carregar"
-      description={message || 'Não foi possível carregar os dados. Tente novamente.'}
+      title="Failed to load"
+      description={message || 'Could not load data. Please try again.'}
       action={
         onRetry
           ? {
-              label: 'Tentar novamente',
+              label: 'Try again',
               onClick: onRetry,
               icon: (
                 <svg

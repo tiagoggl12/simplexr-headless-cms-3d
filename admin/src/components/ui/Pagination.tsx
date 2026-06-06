@@ -70,7 +70,7 @@ export const Pagination = forwardRef<HTMLDivElement, PaginationProps>(
         ref={ref}
         className={cn('flex items-center gap-1', className)}
         role="navigation"
-        aria-label="Navegação de paginação"
+        aria-label="Pagination"
       >
         {/* Previous button */}
         <Button
@@ -90,7 +90,7 @@ export const Pagination = forwardRef<HTMLDivElement, PaginationProps>(
               typeof page === 'string' ? (
                 <span
                   key={`ellipsis-${index}`}
-                  className="px-2 text-gray-400"
+                  className="px-2 text-gray-500"
                   aria-hidden="true"
                 >
                   ...
@@ -117,7 +117,7 @@ export const Pagination = forwardRef<HTMLDivElement, PaginationProps>(
           size="sm"
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage === totalPages}
-          aria-label="Próxima página"
+          aria-label="Next page"
         >
           <ChevronRight className="w-4 h-4" />
         </Button>

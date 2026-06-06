@@ -28,7 +28,7 @@ export function Dropdown({
   options,
   value,
   onChange,
-  placeholder = 'Selecione...',
+  placeholder = 'Select...',
   disabled = false,
   className,
   label,
@@ -91,7 +91,7 @@ export function Dropdown({
           'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
           'disabled:opacity-50 disabled:cursor-not-allowed',
           isOpen ? 'border-primary ring-2 ring-primary' : 'border-gray-300',
-          !selectedOption && 'text-gray-400'
+          !selectedOption && 'text-gray-500'
         )}
         aria-haspopup="listbox"
         aria-expanded={isOpen ? 'true' : 'false'}
@@ -110,7 +110,7 @@ export function Dropdown({
         <ul
           className="absolute z-10 w-full mt-1 py-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto"
           role="listbox"
-          aria-label={label || 'Opções'}
+          aria-label={label || 'Options'}
         >
           {options.map((option) => (
             <li

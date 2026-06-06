@@ -30,7 +30,7 @@ const queryClient = new QueryClient({
 function PageLoader(): JSX.Element {
   return (
     <div className="flex items-center justify-center h-64">
-      <FullPageLoader message="Carregando página..." />
+      <FullPageLoader message="Loading page..." />
     </div>
   );
 }

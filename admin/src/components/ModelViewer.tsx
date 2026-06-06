@@ -28,17 +28,19 @@ function ViewerControls({ onToggleGrid, onResetCamera }: ViewerControlsProps) {
         variant="secondary"
         size="sm"
         onClick={onToggleGrid}
-        title="Toggle Grid"
+        aria-label="Toggle grid"
+        title="Toggle grid"
       >
-        <Grid3X3 className="w-4 h-4" />
+        <Grid3X3 className="w-4 h-4" aria-hidden="true" />
       </Button>
       <Button
         variant="secondary"
         size="sm"
         onClick={onResetCamera}
-        title="Reset Camera"
+        aria-label="Reset camera"
+        title="Reset camera"
       >
-        <RotateCw className="w-4 h-4" />
+        <RotateCw className="w-4 h-4" aria-hidden="true" />
       </Button>
     </div>
   );
@@ -109,6 +111,7 @@ export function ModelViewer({
         <Canvas
           camera={{ position: [5, 5, 5], fov: 45 }}
           shadows
+          frameloop="demand"
           gl={{ antialias: true, alpha: true }}
           onCreated={() => setIsLoading(false)}
           onError={(err) => {

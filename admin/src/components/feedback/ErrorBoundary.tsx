@@ -93,7 +93,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               Recarregar página
             </Button>
             <Button variant="primary" onClick={() => window.history.back()}>
-              Voltar
+              Back
             </Button>
           </div>
         </div>

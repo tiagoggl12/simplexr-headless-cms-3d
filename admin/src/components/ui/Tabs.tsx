@@ -98,7 +98,7 @@ export function Tabs({
         role="tablist"
         className={cn(styles.list)}
         onKeyDown={handleKeyDown}
-        aria-label="Navegação por abas"
+        aria-label="Tabs"
       >
         {tabs.map((tab) => (
           <button

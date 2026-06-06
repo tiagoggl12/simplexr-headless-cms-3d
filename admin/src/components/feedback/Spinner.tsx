@@ -36,10 +36,10 @@ export const Spinner = forwardRef<HTMLDivElement, SpinnerProps>(
           className
         )}
         role="status"
-        aria-label="Carregando"
+        aria-label="Loading"
         {...props}
       >
-        <span className="sr-only">Carregando...</span>
+        <span className="sr-only">Loading...</span>
       </div>
     );
   }

@@ -62,7 +62,7 @@ export function Assets() {
     mutationFn: (id: string) => assetsApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['assets'] });
-      toast.addToast('Asset excluído com sucesso', 'success');
+      toast.addToast('Asset deleted successfully', 'success');
       setDeleteDialog({ isOpen: false, assetId: '', assetName: '' });
     },
     onError: (error: Error) => {
@@ -100,7 +100,7 @@ export function Assets() {
       {/* Page Header */}
       <PageHeader
         title="Assets 3D"
-        description="Gerencie seus modelos 3D na biblioteca"
+        description="Manage your 3D models in the library"
         actions={
           <Link to="/uploads">
             <Button>
@@ -142,7 +142,7 @@ export function Assets() {
                     ? 'bg-primary text-white'
                     : 'text-gray-500 hover:bg-gray-100'
                 )}
-                aria-label="Visualização em grid"
+                aria-label="Grid view"
               >
                 <Grid className="w-4 h-4" />
               </button>
@@ -154,7 +154,7 @@ export function Assets() {
                     ? 'bg-primary text-white'
                     : 'text-gray-500 hover:bg-gray-100'
                 )}
-                aria-label="Visualização em lista"
+                aria-label="List view"
               >
                 <List className="w-4 h-4" />
               </button>
@@ -170,9 +170,9 @@ export function Assets() {
         </div>
       ) : isError ? (
         <Card className="p-8 text-center">
-          <p className="text-gray-500 mb-4">Erro ao carregar assets</p>
+          <p className="text-gray-500 mb-4">Failed to load assets</p>
           <Button variant="secondary" onClick={() => refetch()}>
-            Tentar novamente
+            Try again
           </Button>
         </Card>
       ) : totalItems === 0 ? (
@@ -216,7 +216,7 @@ export function Assets() {
                 <TableHeaderCell>Status</TableHeaderCell>
                 <TableHeaderCell>Criado em</TableHeaderCell>
                 <TableHeaderCell>Atualizado em</TableHeaderCell>
-                <TableHeaderCell className="w-20">Ações</TableHeaderCell>
+                <TableHeaderCell className="w-20">Actions</TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -239,8 +239,8 @@ export function Assets() {
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => handleDeleteClick(asset)}
-                        className="p-1.5 text-gray-400 hover:text-red-600 rounded hover:bg-red-50"
-                        title={`Excluir ${asset.name}`}
+                        className="p-1.5 text-gray-500 hover:text-red-600 rounded hover:bg-red-50"
+                        title={`Delete ${asset.name}`}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -274,24 +274,24 @@ export function Assets() {
         open={deleteDialog.isOpen}
         onOpenChange={(open) => !open && setDeleteDialog({ isOpen: false, assetId: '', assetName: '' })}
       >
-        <DialogContent title="Excluir Asset">
+        <DialogContent title="Delete Asset">
           <p className="text-gray-600">
             Tem certeza que deseja excluir <strong>{deleteDialog.assetName}</strong>?
-            Esta ação não pode ser desfeita.
+            This action cannot be undone.
           </p>
           <DialogFooter>
             <Button
               variant="secondary"
               onClick={() => setDeleteDialog({ isOpen: false, assetId: '', assetName: '' })}
             >
-              Cancelar
+              Cancel
             </Button>
             <Button
               variant="danger"
               onClick={handleDeleteConfirm}
               disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending ? 'Excluindo...' : 'Excluir'}
+              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -350,7 +350,7 @@ function AssetCard({ asset, onDelete }: AssetCardProps) {
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
             <button
               className="bg-white rounded-full p-2 shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-all"
-              title="Visualizar"
+              title="View"
             >
               <svg
                 className="w-5 h-5 text-gray-600"
@@ -389,8 +389,8 @@ function AssetCard({ asset, onDelete }: AssetCardProps) {
           <div className="relative">
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100"
-              title="Opções"
+              className="p-1 text-gray-500 hover:text-gray-600 rounded hover:bg-gray-100"
+              title="Options"
               aria-haspopup="menu"
             >
               <svg
@@ -438,7 +438,7 @@ function AssetCard({ asset, onDelete }: AssetCardProps) {
                         d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                       />
                     </svg>
-                    Visualizar
+                    View
                   </Link>
                   <Link
                     to={`/assets/${asset.id}/edit`}
@@ -457,7 +457,7 @@ function AssetCard({ asset, onDelete }: AssetCardProps) {
                         d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                       />
                     </svg>
-                    Editar
+                    Edit
                   </Link>
                   <button
                     onClick={() => {
@@ -467,7 +467,7 @@ function AssetCard({ asset, onDelete }: AssetCardProps) {
                     className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 w-full"
                   >
                     <Trash2 className="w-4 h-4" />
-                    Excluir
+                    Delete
                   </button>
                 </div>
               </>

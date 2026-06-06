@@ -50,10 +50,12 @@ export function AssetForm() {
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link to="/assets">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
+        <Link
+          to="/assets"
+          aria-label="Back to assets"
+          className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+        >
+          <ArrowLeft className="w-4 h-4" aria-hidden="true" />
         </Link>
         <h1 className="text-2xl font-bold text-gray-900">Create New Asset</h1>
       </div>
@@ -64,36 +66,22 @@ export function AssetForm() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Name
-              </label>
-              <Input
-                {...register('name')}
-                placeholder="My 3D Model"
-                className={errors.name ? 'border-red-300' : ''}
-              />
-              {errors.name && (
-                <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
-              )}
-            </div>
+            <Input
+              label="Name"
+              required
+              {...register('name')}
+              placeholder="My 3D Model"
+              error={errors.name?.message}
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Master URL
-              </label>
-              <Input
-                {...register('masterUrl')}
-                placeholder="https://example.com/models/file.glb"
-                className={errors.masterUrl ? 'border-red-300' : ''}
-              />
-              {errors.masterUrl && (
-                <p className="mt-1 text-sm text-red-600">{errors.masterUrl.message}</p>
-              )}
-              <p className="mt-1 text-xs text-gray-500">
-                Enter the URL to the GLB file. This will be the source of truth for the asset.
-              </p>
-            </div>
+            <Input
+              label="Master URL"
+              required
+              {...register('masterUrl')}
+              placeholder="https://example.com/models/file.glb"
+              error={errors.masterUrl?.message}
+              hint="Enter the URL to the GLB file. This will be the source of truth for the asset."
+            />
 
             <div className="flex items-center gap-3 pt-4">
               <Button type="submit" disabled={createMutation.isPending}>
